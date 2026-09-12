@@ -51,8 +51,8 @@ export async function createBattle(host, onChange) {
   function drawZones() {
     const boundary = clamp(RIVER - ((pressure - 50) / 49) * ZONE_MAX_SHIFT, 135, 800)
     zones.clear()
-    zones.rect(0, 0, W, boundary).fill({ color: '#8f1f28', alpha: .22 })
-    zones.rect(0, boundary, W, MAP_HEIGHT - boundary).fill({ color: '#1f6fa8', alpha: .22 })
+    zones.rect(0, 0, W, boundary).fill({ color: '#8f1f28', alpha: .4 })
+    zones.rect(0, boundary, W, MAP_HEIGHT - boundary).fill({ color: '#1f6fa8', alpha: .4 })
     const ticks = 6
     for (let i = 1; i < ticks; i++) {
       const y = RULER_LOW_Y + (RULER_HIGH_Y - RULER_LOW_Y) * (i / ticks)
