@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { createBattle, CARDS } from './battle.js'
 import MarketHud from './MarketHud.jsx'
 import Sidebar from './Sidebar.jsx'
+import { useMarketFeed } from './marketFeed.js'
 
 function Portrait({ kind, className = '' }) {
   return <span className={`portrait portrait-${kind} ${className}`} />
@@ -15,6 +16,10 @@ export default function App({ user, onLogout }) {
   const [sidebar, setSidebar] = useState(false)
   const [error, setError] = useState('')
   const [round, setRound] = useState(0)
+  const market = useMarketFeed()
+  useEffect(() => {
+    if (market.priceCents != null) battle.current?.setPressure(market.priceCents)
+  }, [market.priceCents])
   useEffect(() => {
     let disposed = false
     let cleanup
@@ -38,7 +43,7 @@ export default function App({ user, onLogout }) {
   return <div className="viewport">
     <section className="game" aria-label="Battlecoin arena">
       <div className="canvas-host" ref={host} />
-      <MarketHud />
+      <MarketHud {...market} />
       <header className="opponent">
         <span className="league-shield">♜</span>
         <div><strong>HUY</strong><span>No Clan</span><small>🏆 155</small></div>

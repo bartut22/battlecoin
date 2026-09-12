@@ -8,6 +8,8 @@ export const CARDS = [
 ]
 const W = 450, RIVER = 424
 const VIEW_W = 1600, VIEW_H = 900, MAP_HEIGHT = 910
+const ZONE_MAX_SHIFT = 150
+const clamp = (value, low, high) => Math.max(low, Math.min(high, value))
 const SX = VIEW_W / MAP_HEIGHT, SY = VIEW_H / W
 // Rotate the tactical map: blue defends the left, red defends the right.
 const project = (x, y) => ({ x: VIEW_W - y * SX, y: x * SY })
@@ -20,6 +22,7 @@ export async function createBattle(host, onChange) {
   try { textures = await Promise.all([Assets.load('/assets/arena.png'), Assets.load('/assets/characters.png')]) }
   catch (error) { app.destroy(true, { children: true }); throw error }
   const background = new Sprite(textures[0]); background.width = VIEW_H; background.height = VIEW_W; background.rotation = Math.PI / 2; background.x = VIEW_W; app.stage.addChild(background)
+  const zones = new Graphics(); zones.position.set(VIEW_W, 0); zones.rotation = Math.PI / 2; zones.scale.set(SY, SX); app.stage.addChild(zones)
   const atlas = textures[1]
   const parts = {}
   // Each generated illustration occupies one atlas cell. Frame the visible art tightly.
@@ -32,6 +35,14 @@ export async function createBattle(host, onChange) {
   let selected = -1, elixir = 5, time = 136, elapsed = 0, enemyClock = 0, ended = false, message = '', messageUntil = 0
   const crowns = [0, 0], towers = [], troops = [], particles = []
   let lastUi = 0
+  let pressure = 50, targetPressure = 50
+  function drawZones() {
+    const boundary = clamp(RIVER - ((pressure - 50) / 49) * ZONE_MAX_SHIFT, 135, 800)
+    zones.clear()
+    zones.rect(0, 0, W, boundary).fill({ color: '#ff4d5e', alpha: .22 })
+    zones.rect(0, boundary, W, MAP_HEIGHT - boundary).fill({ color: '#3fa9ff', alpha: .22 })
+  }
+  drawZones()
   const text = (value, size = 14) => new Text({ text: value, style: { fontFamily: 'Arial, sans-serif', fontSize: size, fontWeight: '900', fill: '#ffffff', stroke: { color: '#30321d', width: 3 } } })
   function sprite(kind, x, y, width) {
     const s = new Sprite(parts[kind]); s.anchor.set(.5, 1); s.width = width * 1.5; s.scale.y = s.scale.x; place(s, x, y); field.addChild(s); return s
@@ -110,6 +121,7 @@ export async function createBattle(host, onChange) {
   app.ticker.add(ticker => {
     const dt = Math.min(ticker.deltaMS / 1000, .05)
     elapsed += dt
+    if (Math.abs(targetPressure - pressure) > .05) { pressure += (targetPressure - pressure) * Math.min(1, dt * 1.5); drawZones() }
     if (!ended) {
       time = Math.max(0, time - dt); elixir = Math.min(10, elixir + dt / 1.5); enemyClock += dt
       if (time === 0) ended = true
@@ -153,6 +165,10 @@ export async function createBattle(host, onChange) {
     if (elapsed - lastUi > .1) { publish(); lastUi = elapsed }
   })
   publish()
-  return { select, destroy() { app.destroy(true, { children: true }) } }
+  return {
+    select,
+    setPressure(cents) { targetPressure = clamp(cents, 1, 99) },
+    destroy() { app.destroy(true, { children: true }) },
+  }
 }
 
