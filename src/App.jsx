@@ -10,6 +10,8 @@ function Portrait({ kind, className = '' }) {
 export default function App({ user, wallet, onLogout }) {
   const host = useRef(null)
   const battle = useRef(null)
+  const drag = useRef(null)
+  const suppressClick = useRef(false)
   const [state, setState] = useState({ elixir: 5, time: 136, selected: -1, crowns: [0, 0], ended: false, message: '' })
   const [help, setHelp] = useState(false)
   const [sidebar, setSidebar] = useState(false)
@@ -25,6 +27,31 @@ export default function App({ user, wallet, onLogout }) {
     return () => { disposed = true; cleanup?.(); battle.current = null }
   }, [round])
 
+  function cardPointerDown(event, index) {
+    if (event.button !== 0 || !event.isPrimary) return
+    suppressClick.current = false
+    drag.current = { id: event.pointerId, index, x: event.clientX, y: event.clientY, active: false }
+    event.currentTarget.setPointerCapture(event.pointerId)
+  }
+  function cardPointerMove(event) {
+    const d = drag.current
+    if (!d || d.id !== event.pointerId) return
+    if (!d.active && Math.hypot(event.clientX - d.x, event.clientY - d.y) > 5) {
+      d.active = true; suppressClick.current = true; battle.current?.dragStart(d.index)
+    }
+    if (d.active) battle.current?.dragMove(event.clientX, event.clientY)
+  }
+  function cardPointerUp(event) {
+    const d = drag.current
+    if (!d || d.id !== event.pointerId) return
+    drag.current = null
+    if (d.active) battle.current?.dragEnd(event.clientX, event.clientY)
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId)
+  }
+  function cardPointerCancel() {
+    if (drag.current?.active) battle.current?.dragCancel()
+    drag.current = null
+  }
   const choose = (index) => battle.current?.select(index)
   useEffect(() => {
     const key = (e) => {
@@ -48,12 +75,12 @@ export default function App({ user, wallet, onLogout }) {
       <div className="crown-score blue-score"><span>♛</span><b>{state.crowns[0]}</b></div>
       <button className="chat-button" aria-label="Show game instructions" onClick={() => setHelp(!help)}>•••</button>
       <Sidebar open={sidebar} onOpen={() => setSidebar(true)} onClose={() => setSidebar(false)} user={user} wallet={wallet} onLogout={onLogout} />
-      {help && <div className="help"><strong>YOUR MOVE, COMMANDER</strong><p>Pick a card, then tap the left side of the arena. Troops cross the bridges and attack enemy towers.</p><p>Fireball can target anywhere. Elixir refills over time.</p><small>Keys 1–4 select cards · Esc cancels</small><button onClick={() => setHelp(false)}>Got it</button></div>}
+      {help && <div className="help"><strong>YOUR MOVE, COMMANDER</strong><p>Drag a card onto the green or red grid to deploy for that team, or select a card and tap a cell. Golems deploy on land or bridges and cross the river using bridges.</p><p>Fireballs damage enemies of the team whose area you tap. Elixir refills over time.</p><small>Keys 1–4 select cards · Esc cancels</small><button onClick={() => setHelp(false)}>Got it</button></div>}
       {state.message && <div className="toast" role="status">{state.message}</div>}
       <footer className="battle-hud">
         <div className="hand">
           <div className="next-card"><span>Next:</span><div><Portrait kind="knight" /></div><b>3</b></div>
-          {CARDS.map((card, i) => <button key={card.name} onClick={() => choose(i)} className={`card ${state.selected === i ? 'selected' : ''} ${state.elixir < card.cost ? 'unavailable' : ''}`} aria-label={`${card.name}, ${card.cost} elixir`} aria-pressed={state.selected === i} title={`${card.name} · ${card.cost} elixir`}>
+          {CARDS.map((card, i) => <button key={card.name} onPointerDown={event => cardPointerDown(event, i)} onPointerMove={cardPointerMove} onPointerUp={cardPointerUp} onPointerCancel={cardPointerCancel} onLostPointerCapture={cardPointerCancel} onDragStart={event => event.preventDefault()} onClick={event => { if (suppressClick.current && event.detail !== 0) { suppressClick.current = false; return } choose(i) }} className={`card ${state.selected === i ? 'selected' : ''} ${state.elixir < card.cost ? 'unavailable' : ''}`} aria-label={`${card.name}, ${card.cost} elixir`} aria-pressed={state.selected === i} title={`${card.name} · ${card.cost} elixir`}>
             {card.kind === 'fireball' ? <span className="fireball-art">☄</span> : <Portrait kind={card.kind} />}
             <span className="card-name">{card.name}</span><span className="cost">{card.cost}</span><kbd>{i + 1}</kbd>
           </button>)}

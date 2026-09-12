@@ -25,8 +25,8 @@ button { font: inherit; cursor: pointer; -webkit-tap-highlight-color: transparen
 .card.selected { transform: translateY(calc(-3 * var(--ui))); border-color: #ffec78; box-shadow: 0 0 0 calc(.6 * var(--ui)) #e6a927, 0 0 calc(4 * var(--ui)) #ffdb5970; }
 .card.unavailable { filter: grayscale(1) brightness(.73); }
 .portrait { display: block; width: 100%; height: 100%; background-image: url('/assets/characters.png'); background-repeat: no-repeat; background-size: 300% 200%; }
-.portrait-knight { background-position: 100% 100%; }
-.portrait-balloon { background-position: 50% 100%; }
+.portrait-knight { background-image: url('/assets/golem_walk_green.png'); background-size: 401% 628%; background-position: 0 7.2%; }
+.portrait-balloon { background-image: url('/assets/green_balloon_shaded.png'); background-size: contain; background-position: center; }
 .card > .portrait { border-radius: calc(1 * var(--ui)); }
 .card-name { position: absolute; bottom: calc(1.7 * var(--ui)); left: calc(-1 * var(--ui)); width: calc(100% + calc(2 * var(--ui))); color: white; text-shadow: 1px 1px 2px #000, -1px -1px #222; font-size: calc(2.6 * var(--ui)); font-weight: 900; }
 .cost { position: absolute; left: calc(-2.1 * var(--ui)); bottom: calc(-2.5 * var(--ui)); width: calc(6.1 * var(--ui)); height: calc(6.7 * var(--ui)); border-radius: 60% 55% 60% 50%; transform: rotate(8deg); display: grid; place-items: center; background: linear-gradient(130deg,#f391f2,#b527d5 65%,#742199); border: calc(.4 * var(--ui)) solid #f8c9ff; color: white; text-shadow: 1px 2px #5e1878; font-size: calc(4.5 * var(--ui)); font-weight: 900; box-shadow: 0 calc(.5 * var(--ui)) #542465; }
@@ -61,3 +61,6 @@ button:focus-visible { outline: 3px solid #fff49c; outline-offset: 3px; }
 .help { left: 4%; bottom: 15%; width: 30%; }
 .toast { top: 43%; left: 35%; width: 30%; }
 
+
+.card { touch-action: none; cursor: grab; }
+.card:active { cursor: grabbing; }
