@@ -3,6 +3,12 @@
 node_modules/
 vendor/
 
+# Python
+__pycache__/
+*.pyc
+*.egg-info/
+.venv/
+
 # Environment files
 .env
 .env.*
