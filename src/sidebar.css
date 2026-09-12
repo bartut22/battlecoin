@@ -21,7 +21,18 @@
 .sidebar-connect { width: 100%; padding: 8px; border-radius: 8px; border: 1px solid #2f5a68; background: #0d1f26; color: #6f8b93; font-weight: 700; cursor: not-allowed; }
 .sidebar-connect:not(:disabled) { background: linear-gradient(#ffdb64, #e9aa29); color: #443111; border-color: #fff0a5; cursor: pointer; }
 .sidebar-connect:not(:disabled):active { transform: translateY(1px); }
-.sidebar-wallet-error { color: #ff9b93 !important; font-size: 12px; }
+.sidebar-wallet-error { color: #ff9b93 !important; font-size: 12px; margin: 8px 0 0 !important; }
+.sidebar-wallet-notice { color: #8ef0b0 !important; font-size: 12px; margin: 8px 0 0 !important; }
+
+.wallet-tabs { display: flex; gap: 6px; margin-bottom: 10px; }
+.wallet-tabs button { flex: 1; padding: 6px 0; background: #0d1f26; border: 1px solid #2f5a68; border-radius: 6px; color: #9fd3e0; font-weight: 700; font-size: 12px; }
+.wallet-tabs button.active { background: linear-gradient(#ffdb64, #e9aa29); border-color: #fff0a5; color: #443111; }
+
+.wallet-form { display: flex; flex-direction: column; gap: 8px; }
+.wallet-form label { display: flex; flex-direction: column; gap: 4px; font-size: 11px; font-weight: 700; color: #9fd3e0; text-transform: none; }
+.wallet-form input { padding: 7px 9px; border-radius: 6px; border: 1px solid #2f5a68; background: #0d1f26; color: #eaf7f9; font: inherit; font-size: 13px; }
+.wallet-form input:focus-visible { outline: 2px solid #ffec78; }
+.wallet-form .sidebar-connect { margin-top: 2px; }
 
 .sidebar-toggle { display: flex; align-items: center; justify-content: space-between; font-size: 14px; font-weight: 700; }
 .sidebar-toggle input { width: 18px; height: 18px; }
