@@ -17,7 +17,7 @@ The 16:9 landscape arena uses original generated art, with blue defending the le
 `src/battle.js` handles PixiJS rendering and the local training opponent.
 `src/App.jsx` handles the React HUD. This is a local playable prototype, without multiplayer.
 
-Original artwork: `public/assets/arena.png` and `public/assets/characters.png`.
+Original artwork: `public/assets/arena.jpg` and `public/assets/characters.png`.
 Both were generated with the built-in image generation tool; exact prompts are saved in
 `public/assets/prompts.json`. The character atlas is framed at runtime, without external assets.
 

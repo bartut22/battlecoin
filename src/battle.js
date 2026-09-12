@@ -17,7 +17,7 @@ export async function createBattle(host, onChange) {
   await app.init({ width: VIEW_W, height: VIEW_H, antialias: true, resolution: Math.min(devicePixelRatio, 2), autoDensity: true, background: '#254b3a' })
   host.appendChild(app.canvas)
   let textures
-  try { textures = await Promise.all([Assets.load('/assets/arena.png'), Assets.load('/assets/characters.png')]) }
+  try { textures = await Promise.all([Assets.load('/assets/arena.jpg'), Assets.load('/assets/characters.png')]) }
   catch (error) { app.destroy(true, { children: true }); throw error }
   const background = new Sprite(textures[0]); background.width = VIEW_H; background.height = VIEW_W; background.rotation = Math.PI / 2; background.x = VIEW_W; app.stage.addChild(background)
   const atlas = textures[1]
