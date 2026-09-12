@@ -1,49 +1,66 @@
 import { useEffect, useRef, useState } from 'react'
-import { Application, Container, Graphics } from 'pixi.js'
+import { createBattle, CARDS } from './battle.js'
+import MarketHud from './MarketHud.jsx'
+
+function Portrait({ kind, className = '' }) {
+  return <span className={`portrait portrait-${kind} ${className}`} />
+}
 
 export default function App() {
   const host = useRef(null)
+  const battle = useRef(null)
+  const [state, setState] = useState({ elixir: 5, time: 136, selected: -1, crowns: [0, 0], ended: false, message: '' })
+  const [help, setHelp] = useState(false)
   const [error, setError] = useState('')
-
+  const [round, setRound] = useState(0)
   useEffect(() => {
     let disposed = false
-    let ready = false
-    const app = new Application()
+    let cleanup
+    createBattle(host.current, setState).then((game) => {
+      if (disposed) game.destroy()
+      else { battle.current = game; cleanup = () => game.destroy() }
+    }).catch(e => setError(e.message))
+    return () => { disposed = true; cleanup?.(); battle.current = null }
+  }, [round])
 
-    async function setup() {
-      await app.init({
-        background: '#171923', resizeTo: host.current, antialias: true,
-      })
-      if (disposed) {
-        app.destroy(true, { children: true })
-        return
-      }
-      ready = true
-      host.current.appendChild(app.canvas)
-
-      const coin = app.stage.addChild(new Container())
-      coin.addChild(new Graphics()
-        .circle(0, 0, 56).fill('#f5b942')
-        .circle(0, 0, 44).stroke({ width: 4, color: '#a66b16' })
-        .rect(-7, -25, 14, 50).fill('#a66b16'))
-
-      let elapsed = 0
-      app.ticker.add((ticker) => {
-        elapsed += ticker.deltaTime / 60
-        coin.position.set(app.screen.width / 2, app.screen.height / 2)
-        coin.scale.x = 0.3 + Math.abs(Math.cos(elapsed)) * 0.7
-      })
+  const choose = (index) => battle.current?.select(index)
+  useEffect(() => {
+    const key = (e) => {
+      if (/^[1-4]$/.test(e.key)) choose(Number(e.key) - 1)
+      if (e.key === 'Escape') { battle.current?.select(-1); setHelp(false) }
     }
-    setup().catch((cause) => {
-      if (!disposed) setError(`Unable to load the scene: ${cause.message}`)
-    })
-    return () => {
-      disposed = true
-      if (ready) app.destroy(true, { children: true })
-    }
+    window.addEventListener('keydown', key)
+    return () => window.removeEventListener('keydown', key)
   }, [])
-
-  return <main ref={host} className="scene" aria-label="Battlecoin 2D scene">
-    {error && <p role="alert">{error}</p>}
-  </main>
+  const restart = () => { setError(''); setRound(n => n + 1) }
+  return <div className="viewport">
+    <section className="game" aria-label="Battlecoin arena">
+      <div className="canvas-host" ref={host} />
+      <MarketHud />
+      <header className="opponent">
+        <span className="league-shield">♜</span>
+        <div><strong>HUY</strong><span>No Clan</span><small>🏆 155</small></div>
+      </header>
+      <div className={`timer ${state.time < 30 ? 'urgent' : ''}`}><span>Time left:</span><strong>{Math.floor(state.time / 60)}:{String(state.time % 60).padStart(2, '0')}</strong></div>
+      <div className="crown-score red-score"><span>♛</span><b>{state.crowns[1]}</b></div>
+      <div className="crown-score blue-score"><span>♛</span><b>{state.crowns[0]}</b></div>
+      <button className="chat-button" aria-label="Show game instructions" onClick={() => setHelp(!help)}>•••</button>
+      {help && <div className="help"><strong>YOUR MOVE, COMMANDER</strong><p>Pick a card, then tap the left side of the arena. Troops cross the bridges and attack enemy towers.</p><p>Fireball can target anywhere. Elixir refills over time.</p><small>Keys 1–4 select cards · Esc cancels</small><button onClick={() => setHelp(false)}>Got it</button></div>}
+      {state.message && <div className="toast" role="status">{state.message}</div>}
+      <footer className="battle-hud">
+        <div className="hand">
+          <div className="next-card"><span>Next:</span><div><Portrait kind="knight" /></div><b>3</b></div>
+          {CARDS.map((card, i) => <button key={card.name} onClick={() => choose(i)} className={`card ${state.selected === i ? 'selected' : ''} ${state.elixir < card.cost ? 'unavailable' : ''}`} aria-label={`${card.name}, ${card.cost} elixir`} aria-pressed={state.selected === i} title={`${card.name} · ${card.cost} elixir`}>
+            {card.kind === 'fireball' ? <span className="fireball-art">☄</span> : <Portrait kind={card.kind} />}
+            <span className="card-name">{card.name}</span><span className="cost">{card.cost}</span><kbd>{i + 1}</kbd>
+          </button>)}
+        </div>
+        <div className="elixir"><b>{Math.floor(state.elixir)}</b><div className="elixir-track"><div style={{ width: `${state.elixir * 10}%` }} /><span /></div><small>10</small></div>
+      </footer>
+      {error && <div className="result" role="alert"><h2>Unable to start</h2><p>{error}</p><button onClick={restart}>Try again</button></div>}
+      {state.ended && <div className="result"><span className="result-crown">♛</span><h1>{state.crowns[0] > state.crowns[1] ? 'VICTORY!' : state.crowns[0] < state.crowns[1] ? 'GOOD BATTLE!' : 'DRAW!'}</h1><p>{state.crowns[0]} — {state.crowns[1]}</p><button onClick={restart}>Battle again</button></div>}
+      <div className="game-label">BATTLECOIN <span>TRAINING ARENA</span></div>
+    </section>
+  </div>
 }
+

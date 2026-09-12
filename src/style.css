@@ -1,3 +1,63 @@
-html, body, #root, .scene { width: 100%; height: 100%; margin: 0; overflow: hidden; }
-canvas { display: block; }
-[role="alert"] { position: absolute; margin: 1rem; padding: 1rem; background: white; color: #a00; font-family: sans-serif; }
+* { box-sizing: border-box; }
+html, body, #root { width: 100%; height: 100%; margin: 0; overflow: hidden; }
+body { background: #101c1c; font-family: 'Arial Rounded MT Bold', 'Trebuchet MS', Arial, sans-serif; }
+button { font: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.viewport { width: 100%; height: 100%; display: grid; place-items: center; background: radial-gradient(ellipse at 50% 45%, #31473d, #101a1b 65%); }
+.game { position: relative; width: min(100vw, 177.7778dvh); height: min(100dvh, 56.25vw); aspect-ratio: 16/9; --ui: .32cqw; overflow: hidden; container-type: inline-size; box-shadow: 0 0 80px #0009; user-select: none; }
+.canvas-host, .canvas-host canvas { width: 100%; height: 100%; display: block; position: absolute; inset: 0; touch-action: none; }
+.canvas-host canvas { width: 100% !important; height: 100% !important; }
+.opponent { position: absolute; top: 6.4%; left: 3%; display: flex; gap: calc(1 * var(--ui)); color: white; font-weight: 900; font-size: calc(3.1 * var(--ui)); line-height: 1.1; text-shadow: 1px 2px 0 #273020, -1px -1px #273020; pointer-events: none; }
+.opponent strong { color: #ff69bc; display: block; font-size: calc(4.2 * var(--ui)); }
+.opponent span, .opponent small { display: block; }
+.opponent small { color: #ffe773; font-size: calc(3.1 * var(--ui)); margin-top: calc(.7 * var(--ui)); }
+.league-shield { display: grid !important; place-items: center; background: linear-gradient(135deg,#b9b6a4,#383c39); border: 2px solid #d4c89b; width: calc(7 * var(--ui)); height: calc(9 * var(--ui)); clip-path: polygon(0 0,100% 0,100% 70%,50% 100%,0 70%); font-size: calc(6 * var(--ui)); }
+.timer { position: absolute; top: 5.8%; right: 2%; background: #202015d9; border: 1px solid #8d8b59; border-radius: 3px; padding: calc(1 * var(--ui)) calc(2 * var(--ui)); text-align: center; color: white; line-height: 1; text-shadow: 1px 2px #111; }
+.timer span { display: block; color: #fff3cd; font-size: calc(2.8 * var(--ui)); font-weight: bold; }
+.timer strong { font-size: calc(6 * var(--ui)); }
+.timer.urgent strong { color: #ff6963; }
+.crown-score { position: absolute; left: 47%; color: #ffda32; font-size: calc(7 * var(--ui)); line-height: .8; text-shadow: 1px 2px #705700; text-align: center; pointer-events: none; }
+.crown-score b { position: absolute; font-size: calc(2.7 * var(--ui)); color: white; top: calc(2.3 * var(--ui)); left: calc(2.3 * var(--ui)); }
+.red-score { top: 12%; } .blue-score { top: 75%; }
+.battle-hud { position: absolute; bottom: 0; height: 15.8%; width: 100%; border-top: calc(.7 * var(--ui)) solid #98daef; border-radius: calc(3 * var(--ui)) calc(3 * var(--ui)) 0 0; background: linear-gradient(110deg,#27799d,#146788 40%,#105679); box-shadow: 0 calc(-1 * var(--ui)) 0 #154b5a, inset 0 calc(1 * var(--ui)) #56aed1, inset 0 calc(-1 * var(--ui)) #143c66; padding: calc(3 * var(--ui)) calc(2.5 * var(--ui)) calc(1 * var(--ui)); }
+.hand { display: flex; gap: calc(2 * var(--ui)); height: 76%; align-items: center; }
+.card { position: relative; height: 100%; width: 20%; padding: 0; background: radial-gradient(at 50% 30%,#dde6db,#718ea0); border: calc(.65 * var(--ui)) solid #e2edf4; border-radius: calc(2 * var(--ui)); box-shadow: 0 calc(.7 * var(--ui)) 0 #17354a, 0 0 0 calc(.4 * var(--ui)) #1b3246; transition: transform .15s, filter .15s; }
+.card:hover { transform: translateY(calc(-1 * var(--ui))); }
+.card.selected { transform: translateY(calc(-3 * var(--ui))); border-color: #ffec78; box-shadow: 0 0 0 calc(.6 * var(--ui)) #e6a927, 0 0 calc(4 * var(--ui)) #ffdb5970; }
+.card.unavailable { filter: grayscale(1) brightness(.73); }
+.portrait { display: block; width: 100%; height: 100%; background-image: url('/assets/characters.png'); background-repeat: no-repeat; background-size: 300% 200%; }
+.portrait-knight { background-position: 100% 100%; }
+.portrait-balloon { background-position: 50% 100%; }
+.card > .portrait { border-radius: calc(1 * var(--ui)); }
+.card-name { position: absolute; bottom: calc(1.7 * var(--ui)); left: calc(-1 * var(--ui)); width: calc(100% + calc(2 * var(--ui))); color: white; text-shadow: 1px 1px 2px #000, -1px -1px #222; font-size: calc(2.6 * var(--ui)); font-weight: 900; }
+.cost { position: absolute; left: calc(-2.1 * var(--ui)); bottom: calc(-2.5 * var(--ui)); width: calc(6.1 * var(--ui)); height: calc(6.7 * var(--ui)); border-radius: 60% 55% 60% 50%; transform: rotate(8deg); display: grid; place-items: center; background: linear-gradient(130deg,#f391f2,#b527d5 65%,#742199); border: calc(.4 * var(--ui)) solid #f8c9ff; color: white; text-shadow: 1px 2px #5e1878; font-size: calc(4.5 * var(--ui)); font-weight: 900; box-shadow: 0 calc(.5 * var(--ui)) #542465; }
+kbd { position: absolute; right: calc(1 * var(--ui)); top: calc(.7 * var(--ui)); color: #fff9; font-size: calc(2 * var(--ui)); }
+.fireball-art { display: grid; place-items: center; width: 100%; height: 100%; font-size: calc(17 * var(--ui)); color: #ffe687; background: radial-gradient(ellipse,#fff887,#ff9d29 35%,#9e3546 60%,#333d64); overflow: hidden; text-shadow: 0 0 10px #ffec91; border-radius: calc(1 * var(--ui)); }
+.next-card { width: 11%; height: 70%; flex-shrink: 0; position: relative; margin-right: calc(1 * var(--ui)); transform: translateY(calc(2 * var(--ui))); }
+.next-card > span { position: absolute; top: calc(-4.5 * var(--ui)); color: white; font-size: calc(3 * var(--ui)); font-weight: bold; text-shadow: 1px 2px #203523; }
+.next-card > div { width: 100%; height: 100%; border: calc(.4 * var(--ui)) solid #d6e2e4; border-radius: calc(1 * var(--ui)); background: #92a6b5; overflow: hidden; }
+.next-card b { position: absolute; bottom: calc(-1 * var(--ui)); left: calc(-1 * var(--ui)); color: white; font-size: calc(3.5 * var(--ui)); text-shadow: 1px 2px #682171; background: #b344c9; border-radius: 50%; padding: 0 calc(1 * var(--ui)); }
+.elixir { display: flex; height: 18%; align-items: center; margin-top: calc(2 * var(--ui)); padding-left: 16%; position: relative; gap: calc(1 * var(--ui)); }
+.elixir > b { position: absolute; left: 12%; top: calc(-.8 * var(--ui)); border-radius: 60% 60% 50% 50%; background: linear-gradient(135deg,#f191ec,#b821d8); border: calc(.4 * var(--ui)) solid #f3a3ff; width: calc(7 * var(--ui)); height: calc(7 * var(--ui)); display: grid; place-items: center; font-size: calc(4.5 * var(--ui)); color: white; z-index: 2; text-shadow: 1px 2px #682171; }
+.elixir-track { position: relative; height: calc(3.6 * var(--ui)); width: 100%; background: #241a46; border: calc(.4 * var(--ui)) solid #171b42; border-radius: calc(1 * var(--ui)); overflow: hidden; box-shadow: 0 calc(.4 * var(--ui)) #6baed4; }
+.elixir-track > div { height: 100%; background: linear-gradient(#f08ded,#d23bd4 50%,#a725c2); transition: width .1s linear; }
+.elixir-track > span { position: absolute; inset: 0; background: repeating-linear-gradient(90deg,transparent 0%,transparent 9.3%,#27193f88 9.4%,#27193f88 10%); }
+.elixir small { color: #94bad9; font-size: calc(2.9 * var(--ui)); font-weight: bold; }
+.chat-button { position: absolute; bottom: 17.4%; left: 3.8%; width: calc(11 * var(--ui)); height: calc(8 * var(--ui)); border: calc(.5 * var(--ui)) solid #364332; border-radius: calc(3 * var(--ui)); background: white; color: #263e47; font-size: calc(5 * var(--ui)); line-height: 0; box-shadow: 0 calc(.7 * var(--ui)) #233c38; }
+.chat-button::after { content: ''; position: absolute; bottom: calc(-2 * var(--ui)); left: calc(2 * var(--ui)); border-width: calc(2 * var(--ui)) calc(2 * var(--ui)) 0 0; border-style: solid; border-color: white transparent transparent transparent; }
+.help { position: absolute; z-index: 5; bottom: 28%; left: 8%; width: 84%; padding: calc(5 * var(--ui)); background: #16374df5; border: calc(.5 * var(--ui)) solid #8ad0e5; border-radius: calc(3 * var(--ui)); color: #e7f6f7; box-shadow: 0 calc(2 * var(--ui)) calc(6 * var(--ui)) #0007; font-size: calc(3.6 * var(--ui)); }
+.help strong { color: #ffdf86; }.help small { font-size: calc(2.8 * var(--ui)); }.help button, .result button { display: block; margin: calc(4 * var(--ui)) auto 0; padding: calc(2 * var(--ui)) calc(6 * var(--ui)); background: linear-gradient(#ffdb64,#e9aa29); color: #443111; border: calc(.5 * var(--ui)) solid #fff0a5; border-radius: calc(2 * var(--ui)); font-weight: 900; box-shadow: 0 calc(1 * var(--ui)) #9e641b; }
+.toast { position: absolute; top: 55%; left: 8%; width: 84%; text-align: center; background: #183047df; padding: calc(2.5 * var(--ui)); border-radius: calc(2 * var(--ui)); color: white; font-size: calc(3.5 * var(--ui)); pointer-events: none; }
+.result { position: absolute; inset: 0; z-index: 10; background: #112939df; display: flex; flex-direction: column; align-items: center; justify-content: center; color: white; font-size: calc(5 * var(--ui)); text-align: center; padding: calc(8 * var(--ui)); }.result h1 { color: #ffdd68; text-shadow: 0 calc(1 * var(--ui)) #76501e; font-size: calc(10 * var(--ui)); margin: calc(3 * var(--ui)) 0; }.result-crown { color: #ffd35c; font-size: calc(24 * var(--ui)); }.result p { margin: calc(3 * var(--ui)); }
+.game-label { position: absolute; bottom: 16.3%; right: 3%; font-size: calc(2 * var(--ui)); letter-spacing: calc(.3 * var(--ui)); color: #f3e7ac99; pointer-events: none; text-shadow: 1px 1px #223528; }.game-label span { margin-left: calc(1 * var(--ui)); font-size: calc(1.5 * var(--ui)); }
+button:focus-visible { outline: 3px solid #fff49c; outline-offset: 3px; }
+/* Landscape HUD leaves both combat lanes clear. */
+.opponent { top: 3%; left: auto; right: 3%; }
+.timer { top: 3%; right: 46%; min-width: 8%; }
+.battle-hud { width: 34%; height: 17%; left: 33%; bottom: 1.5%; border-radius: calc(3 * var(--ui)); }
+.red-score { top: 48%; left: auto; right: 4%; }
+.blue-score { top: 48%; left: 4%; }
+.chat-button { left: 3%; bottom: 4%; }
+.game-label { right: 3%; bottom: 4%; }
+.help { left: 4%; bottom: 15%; width: 30%; }
+.toast { top: 43%; left: 35%; width: 30%; }
+
