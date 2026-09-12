@@ -1,11 +1,18 @@
 import { Connection, Keypair, LAMPORTS_PER_SOL, PublicKey } from '@solana/web3.js'
 
 const DEVNET_URL = 'https://api.devnet.solana.com'
+const LOCAL_URL = 'http://127.0.0.1:8899'
+// Public devnet's airdrop faucet is rate-limited (2 req/8h); point at a local
+// `solana-test-validator` during development to avoid it. Flip back to devnet
+// for the real demo by removing VITE_SOLANA_RPC_URL or setting it to DEVNET_URL.
+const RPC_URL = import.meta.env.VITE_SOLANA_RPC_URL || LOCAL_URL
 const AIRDROP_SOL = 1
+
+export const NETWORK_LABEL = RPC_URL === DEVNET_URL ? 'Solana devnet' : 'local validator'
 
 let connection = null
 function getConnection() {
-  if (!connection) connection = new Connection(DEVNET_URL, 'confirmed')
+  if (!connection) connection = new Connection(RPC_URL, 'confirmed')
   return connection
 }
 

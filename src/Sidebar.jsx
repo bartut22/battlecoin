@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { airdrop, getBalance } from './solana.js'
+import { airdrop, getBalance, NETWORK_LABEL } from './solana.js'
 import './sidebar.css'
 
 const short = (pubkey) => pubkey ? `${pubkey.slice(0, 4)}…${pubkey.slice(-4)}` : ''
@@ -20,7 +20,7 @@ export default function Sidebar({ open, onOpen, onClose, user, wallet, onLogout 
   const requestAirdrop = async () => {
     setBusy(true); setWalletError('')
     try { setBalance(await airdrop(wallet)) }
-    catch { setWalletError('Airdrop failed — devnet faucet may be rate-limited, try again shortly.') }
+    catch { setWalletError(`Airdrop failed against ${NETWORK_LABEL} — try again shortly.`) }
     finally { setBusy(false) }
   }
 
@@ -42,9 +42,9 @@ export default function Sidebar({ open, onOpen, onClose, user, wallet, onLogout 
         <h2>Wallet</h2>
         {wallet ? <div className="sidebar-wallet">
           <span title={wallet.publicKey}>{short(wallet.publicKey)}</span>
-          <p>{balance == null ? 'Loading balance…' : `${balance} SOL`} · Solana devnet</p>
+          <p>{balance == null ? 'Loading balance…' : `${balance} SOL`} · {NETWORK_LABEL}</p>
           {walletError && <p className="sidebar-wallet-error">{walletError}</p>}
-          <button className="sidebar-connect" onClick={requestAirdrop} disabled={busy}>{busy ? 'Requesting…' : 'Request devnet SOL'}</button>
+          <button className="sidebar-connect" onClick={requestAirdrop} disabled={busy}>{busy ? 'Requesting…' : 'Request SOL'}</button>
         </div> : <div className="sidebar-wallet">
           <span>Not connected</span>
           <p>No wallet on this account yet.</p>
