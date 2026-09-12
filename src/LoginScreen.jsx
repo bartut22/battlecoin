@@ -12,7 +12,7 @@ export default function LoginScreen({ onAuth }) {
     e.preventDefault()
     const result = mode === 'login' ? login(username, password) : signup(username, password)
     if (result.error) setError(result.error)
-    else onAuth(result.username)
+    else onAuth(result)
   }
 
   const switchMode = (next) => {

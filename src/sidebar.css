@@ -19,6 +19,9 @@
 .sidebar-wallet span { display: block; font-weight: 700; color: #ffdf86; margin-bottom: 4px; }
 .sidebar-wallet p { margin: 0 0 10px; color: #bfe4ea; }
 .sidebar-connect { width: 100%; padding: 8px; border-radius: 8px; border: 1px solid #2f5a68; background: #0d1f26; color: #6f8b93; font-weight: 700; cursor: not-allowed; }
+.sidebar-connect:not(:disabled) { background: linear-gradient(#ffdb64, #e9aa29); color: #443111; border-color: #fff0a5; cursor: pointer; }
+.sidebar-connect:not(:disabled):active { transform: translateY(1px); }
+.sidebar-wallet-error { color: #ff9b93 !important; font-size: 12px; }
 
 .sidebar-toggle { display: flex; align-items: center; justify-content: space-between; font-size: 14px; font-weight: 700; }
 .sidebar-toggle input { width: 18px; height: 18px; }

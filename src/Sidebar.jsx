@@ -1,8 +1,28 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { airdrop, getBalance } from './solana.js'
 import './sidebar.css'
 
-export default function Sidebar({ open, onOpen, onClose, user, onLogout }) {
+const short = (pubkey) => pubkey ? `${pubkey.slice(0, 4)}…${pubkey.slice(-4)}` : ''
+
+export default function Sidebar({ open, onOpen, onClose, user, wallet, onLogout }) {
   const [sound, setSound] = useState(true)
+  const [balance, setBalance] = useState(null)
+  const [busy, setBusy] = useState(false)
+  const [walletError, setWalletError] = useState('')
+
+  useEffect(() => {
+    if (!open || !wallet) return
+    let cancelled = false
+    getBalance(wallet).then(b => { if (!cancelled) setBalance(b) }).catch(() => {})
+    return () => { cancelled = true }
+  }, [open, wallet])
+
+  const requestAirdrop = async () => {
+    setBusy(true); setWalletError('')
+    try { setBalance(await airdrop(wallet)) }
+    catch { setWalletError('Airdrop failed — devnet faucet may be rate-limited, try again shortly.') }
+    finally { setBusy(false) }
+  }
 
   return <>
     <button className={`sidebar-strip ${open ? 'open' : ''}`} aria-label="Open account menu" onClick={onOpen}>
@@ -20,11 +40,16 @@ export default function Sidebar({ open, onOpen, onClose, user, onLogout }) {
 
       <section className="sidebar-section">
         <h2>Wallet</h2>
-        <div className="sidebar-wallet">
+        {wallet ? <div className="sidebar-wallet">
+          <span title={wallet.publicKey}>{short(wallet.publicKey)}</span>
+          <p>{balance == null ? 'Loading balance…' : `${balance} SOL`} · Solana devnet</p>
+          {walletError && <p className="sidebar-wallet-error">{walletError}</p>}
+          <button className="sidebar-connect" onClick={requestAirdrop} disabled={busy}>{busy ? 'Requesting…' : 'Request devnet SOL'}</button>
+        </div> : <div className="sidebar-wallet">
           <span>Not connected</span>
-          <p>Solana devnet integration coming soon.</p>
+          <p>No wallet on this account yet.</p>
           <button className="sidebar-connect" disabled>Connect wallet</button>
-        </div>
+        </div>}
       </section>
 
       <section className="sidebar-section">

@@ -7,7 +7,7 @@ function Portrait({ kind, className = '' }) {
   return <span className={`portrait portrait-${kind} ${className}`} />
 }
 
-export default function App({ user, onLogout }) {
+export default function App({ user, wallet, onLogout }) {
   const host = useRef(null)
   const battle = useRef(null)
   const [state, setState] = useState({ elixir: 5, time: 136, selected: -1, crowns: [0, 0], ended: false, message: '' })
@@ -47,7 +47,7 @@ export default function App({ user, onLogout }) {
       <div className="crown-score red-score"><span>♛</span><b>{state.crowns[1]}</b></div>
       <div className="crown-score blue-score"><span>♛</span><b>{state.crowns[0]}</b></div>
       <button className="chat-button" aria-label="Show game instructions" onClick={() => setHelp(!help)}>•••</button>
-      <Sidebar open={sidebar} onOpen={() => setSidebar(true)} onClose={() => setSidebar(false)} user={user} onLogout={onLogout} />
+      <Sidebar open={sidebar} onOpen={() => setSidebar(true)} onClose={() => setSidebar(false)} user={user} wallet={wallet} onLogout={onLogout} />
       {help && <div className="help"><strong>YOUR MOVE, COMMANDER</strong><p>Pick a card, then tap the left side of the arena. Troops cross the bridges and attack enemy towers.</p><p>Fireball can target anywhere. Elixir refills over time.</p><small>Keys 1–4 select cards · Esc cancels</small><button onClick={() => setHelp(false)}>Got it</button></div>}
       {state.message && <div className="toast" role="status">{state.message}</div>}
       <footer className="battle-hud">
