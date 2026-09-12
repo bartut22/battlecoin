@@ -32,6 +32,18 @@ export async function createBattle(host, onChange) {
   const field = new Container(); field.sortableChildren = true; app.stage.addChild(field)
   const effects = new Container(); effects.position.set(VIEW_W, 0); effects.rotation = Math.PI / 2; effects.scale.set(SY, SX); app.stage.addChild(effects)
   const guide = new Graphics(); guide.position.set(VIEW_W, 0); guide.rotation = Math.PI / 2; guide.scale.set(SY, SX); app.stage.addChild(guide)
+  const text = (value, size = 14) => new Text({ text: value, style: { fontFamily: 'Arial, sans-serif', fontSize: size, fontWeight: '900', fill: '#ffffff', stroke: { color: '#30321d', width: 3 } } })
+  // Price ruler: red king (low reference) <-> bridge (live spot) <-> blue king (high reference).
+  const RULER_LOW_Y = 190, RULER_HIGH_Y = 770
+  const markers = new Container(); app.stage.addChild(markers)
+  const priceLabel = (initial) => { const t = text(initial, 16); t.anchor.set(.5); markers.addChild(t); return t }
+  const spotLabel = priceLabel('—'); spotLabel.style.fill = '#fff6c9'
+  const lowLabel = priceLabel('—'); lowLabel.style.fill = '#ffc2c8'
+  const highLabel = priceLabel('—'); highLabel.style.fill = '#c7e8ff'
+  { const p = project(225, RIVER); spotLabel.position.set(p.x, p.y - 46) }
+  { const p = project(225, RULER_LOW_Y); lowLabel.position.set(p.x, p.y - 145); lowLabel.text = 'Low —' }
+  { const p = project(225, RULER_HIGH_Y); highLabel.position.set(p.x, p.y - 145); highLabel.text = 'High —' }
+  const fmtPrice = (value) => value == null ? '—' : `$${Number(value).toLocaleString('en-US', { maximumFractionDigits: 0 })}`
   let selected = -1, elixir = 5, time = 136, elapsed = 0, enemyClock = 0, ended = false, message = '', messageUntil = 0
   const crowns = [0, 0], towers = [], troops = [], particles = []
   let lastUi = 0
@@ -39,11 +51,15 @@ export async function createBattle(host, onChange) {
   function drawZones() {
     const boundary = clamp(RIVER - ((pressure - 50) / 49) * ZONE_MAX_SHIFT, 135, 800)
     zones.clear()
-    zones.rect(0, 0, W, boundary).fill({ color: '#ff4d5e', alpha: .22 })
-    zones.rect(0, boundary, W, MAP_HEIGHT - boundary).fill({ color: '#3fa9ff', alpha: .22 })
+    zones.rect(0, 0, W, boundary).fill({ color: '#8f1f28', alpha: .22 })
+    zones.rect(0, boundary, W, MAP_HEIGHT - boundary).fill({ color: '#1f6fa8', alpha: .22 })
+    const ticks = 6
+    for (let i = 1; i < ticks; i++) {
+      const y = RULER_LOW_Y + (RULER_HIGH_Y - RULER_LOW_Y) * (i / ticks)
+      zones.rect(205, y - 2, 40, 4).fill({ color: '#ffffff', alpha: .35 })
+    }
   }
   drawZones()
-  const text = (value, size = 14) => new Text({ text: value, style: { fontFamily: 'Arial, sans-serif', fontSize: size, fontWeight: '900', fill: '#ffffff', stroke: { color: '#30321d', width: 3 } } })
   function sprite(kind, x, y, width) {
     const s = new Sprite(parts[kind]); s.anchor.set(.5, 1); s.width = width * 1.5; s.scale.y = s.scale.x; place(s, x, y); field.addChild(s); return s
   }
@@ -167,7 +183,12 @@ export async function createBattle(host, onChange) {
   publish()
   return {
     select,
-    setPressure(cents) { targetPressure = clamp(cents, 1, 99) },
+    setMarket({ priceCents, spot, low, high } = {}) {
+      if (priceCents != null) targetPressure = clamp(priceCents, 1, 99)
+      if (spot != null) spotLabel.text = fmtPrice(spot)
+      if (low != null) lowLabel.text = `Low ${fmtPrice(low)}`
+      if (high != null) highLabel.text = `High ${fmtPrice(high)}`
+    },
     destroy() { app.destroy(true, { children: true }) },
   }
 }

@@ -3,11 +3,12 @@ import { useEffect, useRef, useState } from 'react'
 const ROUND_SECONDS = 60
 const POLL_MS = 2000
 const VOLATILITY = '0.6'
+const BAND_PCT = 0.002 // visual low/high reference band around the round's target, +-0.2%
 
 export function useMarketFeed() {
   const [utc, setUtc] = useState(() => new Date().toISOString().slice(11, 19))
-  const [live, setLive] = useState({ status: 'loading', spot: null, priceCents: null, change: null })
-  const round = useRef({ target: null, expiry: 0 })
+  const [live, setLive] = useState({ status: 'loading', spot: null, priceCents: null, change: null, low: null, high: null })
+  const round = useRef({ target: null, expiry: 0, low: null, high: null })
 
   useEffect(() => {
     const tick = setInterval(() => setUtc(new Date().toISOString().slice(11, 19)), 1000)
@@ -24,7 +25,13 @@ export function useMarketFeed() {
           const spotRes = await fetch('/api/spot')
           const spotData = await spotRes.json()
           if (spotData.error) throw new Error(spotData.error)
-          round.current = { target: spotData.last, expiry: now + ROUND_SECONDS * 1000 }
+          const target = Number(spotData.last)
+          round.current = {
+            target: spotData.last,
+            expiry: now + ROUND_SECONDS * 1000,
+            low: target * (1 - BAND_PCT),
+            high: target * (1 + BAND_PCT),
+          }
         }
 
         const params = new URLSearchParams({
@@ -41,6 +48,8 @@ export function useMarketFeed() {
           spot: Number(data.spot),
           priceCents: data.price_cents,
           change: prev.spot ? Number(data.spot) - prev.spot : 0,
+          low: round.current.low,
+          high: round.current.high,
         }))
       } catch {
         if (!cancelled) setLive(prev => ({ ...prev, status: 'offline' }))

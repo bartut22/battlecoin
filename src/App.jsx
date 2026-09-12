@@ -18,8 +18,8 @@ export default function App({ user, onLogout }) {
   const [round, setRound] = useState(0)
   const market = useMarketFeed()
   useEffect(() => {
-    if (market.priceCents != null) battle.current?.setPressure(market.priceCents)
-  }, [market.priceCents])
+    battle.current?.setMarket(market)
+  }, [market.priceCents, market.spot, market.low, market.high])
   useEffect(() => {
     let disposed = false
     let cleanup
