@@ -1,0 +1,152 @@
+.market-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  color: #f8faf4;
+  font-family: Arial, Helvetica, sans-serif;
+  text-shadow: 0 1px 2px #0007;
+}
+.market-clock {
+  position: absolute;
+  top: 1.5%;
+  left: 1.3%;
+  color: #c7cbbd;
+  font: 800 .62cqw 'Courier New', monospace;
+}
+.market-heading {
+  position: absolute;
+  top: 1.3%;
+  left: 35%;
+  width: 30%;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: .8cqw;
+  align-items: center;
+  padding: .45cqw .7cqw;
+  border: 1px solid #ffffff18;
+  border-radius: .45cqw;
+  background: #06100bc9;
+}
+.market-caption { color: #aeb5a8; font-size: .58cqw; font-weight: 900; line-height: 1.2; text-transform: uppercase; }
+.market-quote { min-width: 0; }
+.market-price {
+  display: block;
+  font: 900 1.45cqw/1.05 'Courier New', monospace;
+  white-space: nowrap;
+}
+.market-change { display: block; margin-top: .22cqw; color: #48df8e; font-size: .68cqw; font-weight: 900; white-space: nowrap; }
+.market-pressure { text-align: right; min-width: 8cqw; }
+.market-pressure > strong { display: block; font-size: .95cqw; }
+.market-pressure p { color: #d4d7ca; font-size: .6cqw; font-weight: 800; margin: .12cqw 0 0; white-space: nowrap; }
+.market-wall {
+  position: absolute;
+  top: 34%;
+  width: 8.6%;
+  padding: .55cqw .7cqw;
+  border: 1px solid #ffffff1c;
+  background: #06100bbc;
+}
+.market-wall strong { display: block; margin-top: .18cqw; font: 900 1.15cqw 'Courier New', monospace; }
+.sell-wall { right: .8%; color: #ff536e; text-align: right; }
+.buy-wall { left: .8%; color: #4ddf92; }
+.market-editor {
+  position: absolute;
+  left: 1%;
+  bottom: 23%;
+  width: 20%;
+  padding: .58cqw;
+  border: 1px solid #ffffff1d;
+  border-radius: .45cqw;
+  background: #07120dd5;
+  pointer-events: auto;
+}
+.editor-row { display: grid; gap: .38cqw; margin-bottom: .4cqw; }
+.editor-row.two { grid-template-columns: 1fr 1fr; }
+.editor-row.four { grid-template-columns: 1fr 1fr; }
+.editor-row label, .editor-row b {
+  display: grid;
+  gap: .18cqw;
+  color: #dbe5d6;
+  font-size: .52cqw;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+.editor-row input {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid #ffffff24;
+  border-radius: .28cqw;
+  padding: .28cqw .32cqw;
+  background: #fffaf0;
+  color: #1d241b;
+  font: 900 .62cqw 'Courier New', monospace;
+}
+.compact-book input { font-size: .55cqw; }
+.spread-row {
+  grid-template-columns: 1.35cqw 1fr 1.35cqw;
+  align-items: end;
+}
+.spread-row button {
+  height: 1.42cqw;
+  border: 1px solid #ffe59a88;
+  border-radius: .28cqw;
+  background: #314638;
+  color: #fff5c6;
+  font-size: .85cqw;
+  font-weight: 900;
+}
+.deck-values { grid-template-columns: 1fr 1fr; }
+.takers { grid-template-columns: 1fr 1fr; margin-bottom: 0; }
+.takers div { display: grid; gap: .24cqw; }
+.hermes-routes {
+  position: absolute;
+  top: 8%;
+  right: 1%;
+  width: 12.5%;
+  display: grid;
+  gap: .32cqw;
+  pointer-events: none;
+}
+.hermes-routes div {
+  padding: .42cqw .52cqw;
+  border: 1px solid #ffffff1f;
+  border-radius: .36cqw;
+  background: #07120dc5;
+}
+.hermes-routes span {
+  color: #8cf2bf;
+  font-size: .48cqw;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+.hermes-routes strong {
+  display: block;
+  color: #fff8d7;
+  font-size: .62cqw;
+}
+.hermes-routes small {
+  display: block;
+  color: #bbc7b4;
+  font-size: .5cqw;
+}
+.book-tape {
+  position: absolute;
+  right: 1%;
+  bottom: 23%;
+  width: 15%;
+  display: grid;
+  gap: .32cqw;
+}
+.book-tape div {
+  padding: .42cqw .55cqw;
+  border: 1px solid #ffffff1d;
+  border-radius: .36cqw;
+  background: #06100bc5;
+}
+.book-tape span { display: block; color: #c9cec2; font-size: .52cqw; font-weight: 900; text-transform: uppercase; }
+.book-tape strong { font: 900 .9cqw 'Courier New', monospace; }
+.book-tape small { display: block; color: #d7dcca; font-size: .52cqw; font-weight: 800; }
+.book-tape .up-row strong { color: #50e693; }
+.book-tape .down-row strong { color: #ff647a; }
+.game > .battle-hud, .game > .chat-button, .game > .toast, .game > .trading-blotter { z-index: 3; }
