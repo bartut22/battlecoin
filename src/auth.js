@@ -1,46 +1,44 @@
 import { createWallet } from './solana.js'
 
-const USERS_KEY = 'battlecoin_users'
 const SESSION_KEY = 'battlecoin_session'
 
-function loadUsers() {
-  try { return JSON.parse(localStorage.getItem(USERS_KEY)) ?? {} }
-  catch { return {} }
-}
-
-function saveUsers(users) {
-  localStorage.setItem(USERS_KEY, JSON.stringify(users))
-}
-
 export function getSession() {
-  return localStorage.getItem(SESSION_KEY)
+  try { return JSON.parse(localStorage.getItem(SESSION_KEY)) }
+  catch { return null }
 }
 
-export function getUser(username) {
-  return loadUsers()[username] ?? null
+async function request(path, body) {
+  let res
+  try {
+    res = await fetch(`/api${path}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    })
+  } catch {
+    return { error: 'Cannot reach the server. Is the backend running?' }
+  }
+  const data = await res.json().catch(() => ({}))
+  if (!res.ok) return { error: data.detail || 'Something went wrong.' }
+  return data
 }
 
-export function signup(username, password) {
+export async function signup(username, password) {
   username = username.trim()
   if (!username || !password) return { error: 'Enter a username and password.' }
-  const users = loadUsers()
-  if (users[username]) return { error: 'That username is taken.' }
   const wallet = createWallet()
-  users[username] = { password, wallet }
-  saveUsers(users)
-  localStorage.setItem(SESSION_KEY, username)
-  return { username, wallet, isNew: true }
+  const result = await request('/signup', { username, password, ...wallet })
+  if (result.error) return result
+  localStorage.setItem(SESSION_KEY, JSON.stringify({ username: result.username, wallet: result.wallet }))
+  return { username: result.username, wallet: result.wallet, isNew: true }
 }
 
-export function login(username, password) {
+export async function login(username, password) {
   username = username.trim()
-  const users = loadUsers()
-  const record = users[username]
-  if (!record || record.password !== password) {
-    return { error: 'Wrong username or password.' }
-  }
-  localStorage.setItem(SESSION_KEY, username)
-  return { username, wallet: record.wallet }
+  const result = await request('/login', { username, password })
+  if (result.error) return result
+  localStorage.setItem(SESSION_KEY, JSON.stringify({ username: result.username, wallet: result.wallet }))
+  return { username: result.username, wallet: result.wallet }
 }
 
 export function logout() {

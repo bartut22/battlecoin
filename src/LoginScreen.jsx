@@ -8,10 +8,13 @@ export default function LoginScreen({ onAuth }) {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [launching, setLaunching] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
 
-  const submit = (e) => {
+  const submit = async (e) => {
     e.preventDefault()
-    const result = mode === 'login' ? login(username, password) : signup(username, password)
+    setSubmitting(true)
+    const result = mode === 'login' ? await login(username, password) : await signup(username, password)
+    setSubmitting(false)
     if (result.error) { setError(result.error); return }
     setLaunching(true)
     setTimeout(() => onAuth(result), 1000)
@@ -34,7 +37,9 @@ export default function LoginScreen({ onAuth }) {
         <label>Username<input value={username} onChange={e => setUsername(e.target.value)} autoComplete="username" autoFocus /></label>
         <label>Password<input type="password" value={password} onChange={e => setPassword(e.target.value)} autoComplete={mode === 'login' ? 'current-password' : 'new-password'} /></label>
         {error && <p className="auth-error" role="alert">{error}</p>}
-        <button type="submit" className="auth-submit">{mode === 'login' ? 'Enter the arena' : 'Create account'}</button>
+        <button type="submit" className="auth-submit" disabled={submitting}>
+          {submitting ? 'Please wait…' : mode === 'login' ? 'Enter the arena' : 'Create account'}
+        </button>
       </>}
     </form>
   </div>

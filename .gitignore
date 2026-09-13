@@ -2,6 +2,9 @@
 # Dependencies
 node_modules/
 vendor/
+api/.venv/
+__pycache__/
+*.pyc
 
 # Environment files
 .env
