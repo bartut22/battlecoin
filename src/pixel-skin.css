@@ -281,3 +281,9 @@
   .tutorial-modal { padding:15px; }
   .tutorial-modal p,.tutorial-modal li,.remember { font-size:14px; }
 }
+
+/* Pixelify Sans' digits are hard to tell apart at small sizes (0/6/8, 3/8). Numeric-heavy
+   readouts use VT323 instead, which was designed for exactly this. */
+.outcome strong,.market-metrics b,.capital-title b,.capital-actions span,.quote-board button b,
+.quote-pair b,.exchange th,.exchange td,.book-group th,.book-group td,.deck-card>b,.pnl,.pnl b,
+.card-setting input,.sol-convert-row input,.market-title b { font-family:'VT323',monospace; letter-spacing:.5px; }

@@ -7,7 +7,7 @@ import { tradeImpacts, troopLiquidity } from './trade-impact.js'
 export const CARDS = DEFAULT_CARD_VALUES
 const {width:W,height:H,left:LEFT,right:RIGHT,top:TOP,bottom:BOTTOM}=ARENA
 export async function createBattle(host,onChange,config={},recordTrade=()=>{}) {
-  await document.fonts.load('600 20px "Pixelify Sans"')
+  await document.fonts.load('20px "VT323"')
   const app=new Application()
   await app.init({width:W,height:H,antialias:true,resolution:Math.min(devicePixelRatio,2),autoDensity:true,background:'#345536'})
   host.appendChild(app.canvas)
@@ -43,7 +43,7 @@ export async function createBattle(host,onChange,config={},recordTrade=()=>{}) {
   let orderSide=config.orderSide||'UP', bombId=0
   let selected=-1,elapsed=0,lastUi=0,message='',messageUntil=0,drawnFair=.5,targetFair=.5,marketId=null,hover=null
   const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches
-  const text=(value,size=16,color='#fff')=>new Text({text:value,roundPixels:true,style:{fontFamily:'Pixelify Sans',fontSize:size+4,fontWeight:'600',fill:color,stroke:{color:'#302718',width:2}}})
+  const text=(value,size=16,color='#fff')=>new Text({text:value,roundPixels:true,style:{fontFamily:'VT323',fontSize:size+8,fill:color,stroke:{color:'#302718',width:3}}})
   const hoverLabel=text('',20,'#fff5b3');hoverLabel.anchor.set(.5);hoverLabel.visible=false;app.stage.addChild(hoverLabel)
   function addUnit(key,side,x,y,own=false,kind='scout'){
     const wrap=new Container(),texture=characterTextures[side][kind]
