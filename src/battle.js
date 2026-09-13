@@ -11,6 +11,15 @@ export async function createBattle(host,onChange,config={}) {
   const app=new Application()
   await app.init({width:W,height:H,antialias:true,resolution:Math.min(devicePixelRatio,2),autoDensity:true,background:'#345536'})
   host.appendChild(app.canvas)
+  const resizeCanvas=()=>{
+    const scale=Math.min(host.clientWidth/W,host.clientHeight/H)
+    if(!Number.isFinite(scale)||scale<=0)return
+    app.canvas.style.setProperty('width',`${W*scale}px`,'important')
+    app.canvas.style.setProperty('height',`${H*scale}px`,'important')
+  }
+  const canvasResizeObserver=new ResizeObserver(resizeCanvas)
+  canvasResizeObserver.observe(host)
+  resizeCanvas()
   let assets
   try {assets=await Promise.all(['/assets/arena-sand-left-trees.png','/assets/golem_green.json','/assets/golem_red.json','/assets/green_balloon_shaded.png','/assets/red_balloon_shaded.png','/assets/tower_primary_green.png','/assets/tower_primary_red.png'].map(path=>Assets.load(path)))}
   catch(error){app.destroy(true,{children:true});throw error}
@@ -346,5 +355,5 @@ export async function createBattle(host,onChange,config={}) {
   setMarket(config)
   return {setMarket,select,cancelOrder,closePosition,depositCapital(amount=100){ledger.deposit(amount);fundedCapital+=amount;showMessage('Added $'+amount+' simulated funds')},
     dragStart(index){selected=index;publish()},dragMove(x,y){hover=local(x,y)},dragEnd(x,y){deploy(local(x,y));selected=-1;hover=null;preview.clear();publish()},dragCancel(){selected=-1;hover=null;preview.clear();publish()},
-    destroy(){app.destroy(true,{children:true})}}
+    destroy(){canvasResizeObserver.disconnect();app.destroy(true,{children:true})}}
 }
