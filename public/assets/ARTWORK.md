@@ -2,6 +2,75 @@
 
 Generated with the built-in image-generation tool for this project.
 
+## Pixel Scenery and Cent Icon
+
+`arena-pixel-grounded.png` is the current map. It was created with the built-in image tool
+from `arena-grounded.png`, preserving the walls, bridge, paving, and arrow locations.
+The source result was `exec-024dc433-a08f-41ff-a89f-004e328856ef.png` under the local Codex
+generated-images directory, then copied here. Final prompt:
+
+> Use case: style-transfer. Edit target: the supplied portrait battle arena map. Create a
+> strict low-resolution pixel-art version matching 16-bit sand-themed RPG troop sprites.
+> Keep EXACT map layout, portrait 1:2 proportions, ALL wall boundaries, chessboard tile
+> positions, central single wooden bridge and river, pavement and gold chevron positions,
+> palms predominantly at bottom end (becomes left when rotated). Change ONLY rendering
+> style: sharply stepped pixel edges, 2-4 tone shaded pixel clusters on palms, foliage,
+> rocks, sand, water and masonry, no smooth gradients, no painted/blurred surfaces, no
+> antialiasing. Read like a 320x640 pixel game map enlarged with nearest-neighbor. No towers,
+> characters, flags, text or new objects. Walls and pavement must not move. Same framing,
+> no crop.
+
+`cent-pixel.svg` is a code-native 5x9 pixel glyph, proportioned for VT323 rather than an
+AI-generated icon. React masks it with the surrounding text color; Pixi uses the same image
+as a tinted texture. Ambient wind, foam, tumbleweed, and tutorial animation are code-rendered
+game effects using the existing map and troop artwork, not video overlays.
+
+## Grounded Flag Revision
+
+The current renderer uses `arena-grounded.png` with the four baked-in banner assemblies removed.
+`grounded-flags.png` is a separate pair of green/right-arrow and red/left-arrow upright flags.
+`src/arena-flags.js` removes the magenta backdrop and anchors each stone socket to its arena
+coordinate. Their poles remain vertical when the background is rotated. Both files were generated
+with the built-in image tool, then copied into this directory.
+
+Map edit prompt: remove only the four flag/banner assemblies and their long wooden poles; restore
+the sand, stone and vegetation behind them. Preserve the arena, walls, bridge, river, grid,
+pavement, gold pavement arrows, rocks, trees, and exact vertical 1:2 geometry.
+
+Flag atlas prompt: two standing wooden flagpoles, each planted in a chunky sandstone socket.
+Left sprite has its pole on the left, green cloth extending right, and a gold right arrow.
+Right sprite is the mirrored red variant with a gold left arrow. Both bases sit on one baseline;
+full poles are visibly seated in stone. Crisp pixel-art desert strategy-game style, generous
+magenta chroma-key padding, no scenery or lettering.
+
+## Balloon and Faction Revision (September 13)
+
+- `sand-balloon-roster.png`: six sprites, small scout, medium caravan, and large twin-canopy siege
+  bombers. Green UP is the top row and red DOWN is the bottom row. Explicit atlas bounds in
+  `src/character-art.js` separate the wide silhouettes, then remove the magenta chroma background.
+- `arena-faction-banners.png`: geometry-preserving edit of the sand arena. The lower spawn becomes
+  game-left after clockwise rotation, with green banners and inward-facing arrows. The upper spawn
+  becomes game-right, with red banners. The poles extend away from the battlefield.
+- Both assets were generated with the built-in image tool and copied into this directory.
+
+### Balloon Prompt
+
+Create one production sprite atlas PNG for a sand-themed pixel-art trading battle game. Exactly
+3 columns x 2 rows of isolated hot air balloon bombers, green and sand gold on the top row, red
+and sand gold on the bottom. Small: one round canopy, wicker basket and sand pilot holding a bomb.
+Medium: elongated segmented canopy, reinforced basket and two bomb racks. Large: broad twin-lobed
+canopy, armored gold ribs, substantial gondola and three bomb racks. Distinct silhouettes at tiny
+size, crisp 16-bit pixel art, no turquoise/blue, no text, uncropped sprites. Follow-up edit replaced
+the generated checkerboard with perfectly flat #FF00FF magenta while preserving all six sprites.
+
+### Faction Map Prompt
+
+Preserve exact canvas aspect ratio and all coordinates of walls, tiles, river, bridge, pavement,
+trees and rocks. At the bottom spawn, point pavement chevrons and banner emblems UP toward the
+arena; recolor banners GREEN and extend wooden supports down, away from battle. At the top spawn,
+keep chevrons and banner emblems pointing DOWN toward the arena; recolor banners RED and extend
+supports toward the top edge. No new structures, towers, typography, or UI. Source rotates clockwise.
+
 ## Sand Arena Revision
 
 - `sand-troops-pixel.png`: 1536 x 1024 chroma-key atlas with four distinct sand units in UP and DOWN variants.

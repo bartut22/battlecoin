@@ -1,8 +1,8 @@
 export const DEFAULT_CARD_VALUES = [
   { id: 'limit-scout', name: 'Dune Ranger', kind: 'scout', notional: 5, hp: 280, damage: 58, speed: 54, count: 1 },
   { id: 'wall-guard', name: 'Sand Guard', kind: 'guard', notional: 10, hp: 360, damage: 68, speed: 38, count: 1 },
-  { id: 'taker-balloon', name: 'Sand Bomber', kind: 'balloon', notional: 20, hp: 720, damage: 230, speed: 24, count: 1 },
   { id: 'anchor-maker', name: 'Rune Golem', kind: 'anchor', notional: 25, hp: 940, damage: 132, speed: 27, count: 1 },
+  ...[['small', 'Sand Bomber', 5], ['medium', 'Caravan Bomber', 20], ['large', 'Siege Bomber', 50]].map(([balloonSize, name, notional]) => ({ id: `taker-balloon-${balloonSize}`, name, kind: 'balloon', artKind: `balloon-${balloonSize}`, balloonSize, notional, count: 1 })),
 ]
 export const DEFAULT_TAKER_VALUES = { up: [25, 10, 5], down: [25, 10, 5] }
 export const DEFAULT_MARKET = {
@@ -16,16 +16,42 @@ export function numberValue(value, fallback = 0) {
   const parsed = Number(value)
   return Number.isFinite(parsed) ? parsed : fallback
 }
+function quoteEstimate(market, side) {
+  const suffix = side === 'UP' ? 'Up' : 'Down'
+  const bid = numberValue(market['bid' + suffix], null), ask = numberValue(market['ask' + suffix], null)
+  if (bid === null || ask === null || bid < 0 || ask > 100 || bid > ask) return null
+  const sizeAt = (type, price) => (market.book?.[side]?.[type] || []).reduce((sum, level) => {
+    const size = numberValue(level.size), levelPrice = numberValue(level.price, null)
+    return levelPrice !== null && Math.abs(levelPrice * 100 - price) < .00001 && size > 0 ? sum + size : sum
+  }, 0)
+  const bidSize = sizeAt('bids', bid), askSize = sizeAt('asks', ask)
+  if (!(bidSize > 0 && askSize > 0)) return null
+  // Opposite-side weighting: bid pressure pulls the estimate toward the ask.
+  return { price: (ask * bidSize + bid * askSize) / (bidSize + askSize), depth: bidSize + askSize, bid, ask }
+}
 export function marketCoverage(market) {
   const bid = numberValue(market.bidUp, null), ask = numberValue(market.askUp, null)
   const last = numberValue(market.lastTradeUp, null)
   const spread = bid !== null && ask !== null ? ask - bid : null
-  const fair = spread !== null && spread >= 0 && spread <= 10 ? (bid + ask) / 2 : last
+  const upBook = quoteEstimate(market, 'UP'), downBook = quoteEstimate(market, 'DOWN')
+  let fair, source
+  if (upBook || downBook) {
+    // Complementary outcomes express the same probability. Pool compatible BBO
+    // estimates by displayed contract depth; do not pool a crossed/stale pair.
+    const compatible = upBook && downBook && Math.max(upBook.bid, 100 - downBook.ask) <= Math.min(upBook.ask, 100 - downBook.bid) + 1e-8
+    fair = compatible ? (upBook.price * upBook.depth + (100 - downBook.price) * downBook.depth) / (upBook.depth + downBook.depth)
+      : upBook ? upBook.price : 100 - downBook.price
+    source = 'Microprice'
+  } else {
+    const midpointAvailable = spread !== null && spread >= 0 && spread <= 10 && bid >= 0 && ask <= 100
+    fair = midpointAvailable ? (bid + ask) / 2 : last
+    source = midpointAvailable ? 'Midpoint fallback' : last !== null ? 'Last trade' : 'Unavailable'
+  }
   const up = fair === null ? null : clamp(fair, 0, 100)
   return {
     upCents: up, downCents: up === null ? null : 100 - up,
     upCoverage: up === null ? .5 : up / 100, downCoverage: up === null ? .5 : 1 - up / 100,
-    available: up !== null, source: spread !== null && spread >= 0 && spread <= 10 ? 'Midpoint' : 'Last trade',
+    available: up !== null, source,
     ambiguityTiles: clamp(Math.round((spread || 0) * 2), 0, 14),
   }
 }

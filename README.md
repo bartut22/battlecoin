@@ -36,8 +36,29 @@ npm run dev
 Runs on `http://localhost:5173`. `vite.config.js` proxies `/gamma` and `/clob` to Polymarket
 (avoiding CORS for public market data), `/poly` to `polymarket.com` (for the BTC opening-price
 reference lookup), and `/api` to the local backend. Pixel fonts are self-hosted via
-`@fontsource` (no external font request at runtime): `Pixelify Sans` for the dashboard and
-arena labels, `Press Start 2P` for the login screen.
+`@fontsource` (no external font request at runtime): `Pixelify Sans` for dashboard headings,
+`VT323` for numeric readouts and arena labels, `Press Start 2P` for the login screen.
+The dashboard and canvas share a scalable pixel-art cent image instead of a letter C.
+
+### Ambient scenery and training
+
+Palm sway, intermittent wind, looping river ripples, and a short-side tumbleweed are
+restricted to peripheral scenery zones. They do not receive pointer events or change
+orders. Effects are suppressed within 40 arena pixels of actor bounds, and reduced-motion
+preferences leave the scenery still. Both towers have matching offsets from their walls.
+
+The tutorial contains a separate animated paper-order example with pause/replay controls.
+It never calls the ledger, wallet, or order APIs; reduced motion shows a static example.
+
+With the dev server on port 5174, verify these changes using:
+
+```bash
+npm test
+node scripts/verify-microstructure-arena.mjs
+node scripts/verify-ambience.mjs
+node scripts/verify-arena-load.mjs
+npm run build
+```
 
 ### 3. Backend
 
@@ -79,8 +100,9 @@ devnet instead (needed for a build judges/other machines will actually hit).
   WebSocket. A second WebSocket (Polymarket's RTDS feed) tracks live BTC spot price against the
   round's opening reference ("price to beat" / "distance").
 - Drag a troop card onto the UP or DOWN side of the field to trade:
-  - **Sand Bomber** is a taker — fills immediately against available asks.
-  - The other three cards place resting limit orders at the dropped price rank; they fill when
+  - **Sand Bomber**, **Caravan Bomber**, and **Siege Bomber** are small, medium, and large taker cards,
+    grouped to the right of the limit deck. Each simulates taking available asks.
+  - The three troop cards place resting limit orders at the dropped price rank; they fill when
     a matching public trade crosses that price, or expire uncancelled when the round rolls over.
 - Troops on the field represent aggregated order-book depth, not individual traders — card
   denominations (Settings tab) control how a given notional is broken into troops. A hit that
@@ -106,9 +128,36 @@ book grouping and depth-to-troop conversion, ledger accounting (fills, cancels, 
 Polymarket feed normalization and market rollover, zero/100c price edge cases, and arena
 placement geometry.
 
-`node scripts/verify-arena-updates.mjs` is a separate Playwright-based smoke check against a
-running dev server — bid placement, partial/full hits, market rollover, and pixel typography
-rendering at desktop/tablet/mobile widths.
+`node scripts/verify-microstructure-arena.mjs` checks the current UI against the dev server at
+port 5174 with isolated mocked market data: shared fair value, moving-target bombs, partial/full
+hits, editable taker cards and public thresholds, tutorial persistence, and responsive layouts.
+
+### Fair Value and Executions
+
+The dashboard and arena boundary use the same best-quote size-weighted estimate:
+`microprice = (ask * bidQuantity + bid * askQuantity) / (bidQuantity + askQuantity)`.
+This is the queue-imbalance weighted mid described in
+[Limit Order Book by Imanol Perez](https://www.quantstart.com/articles/high-frequency-trading-ii-limit-order-book/).
+It is a short-horizon reference estimate, not a calibrated probability of the final market result.
+Compatible UP and complementary DOWN estimates are pooled by displayed contract depth; DOWN
+fair value is always `100 - UP`. An inconsistent pair uses the available UP estimate. Missing
+quote sizes fall back to the labeled midpoint or last trade. The engine supports 0-100c.
+Actual quotes and deployment prices retain their executable book levels, and P&L retains bid marks.
+
+Bombs target exact matched price-level liquidity and follow moving troops. A trade matching several
+visible units drops a bomb per target. Unmatched trades beyond the rendered depth produce no arbitrary
+ground explosion. Full consumption collapses the sprite into sand fragments; partial hits recoil,
+and removed depth retreats. These are visualizations of aggregated public data, not trader identities.
+My cards controls your six simulated order sizes; Settings controls the public balloon size thresholds
+independently. New green/red balloon sprites are shared by the deck, settings, and arena.
+
+Available capital stays above the right-hand book; SOL conversion/refill is in the left account
+menu. The full-width deck groups limit troops and taker balloons. Game, book, card, menu, and
+tutorial typography use Pixelify Sans, matching the fair-value headings.
+
+The renderer caches rank calculations and labels, skips unchanged geometry, and ignores effects
+whose targets were already removed. Run `node scripts/verify-arena-load.mjs` against port 5174 for
+an isolated dense-book/trade-burst check, including cleanup and animation responsiveness.
 
 ## Known limitations
 
