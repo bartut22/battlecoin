@@ -28,3 +28,8 @@
 .sol-convert-row button{display:flex;align-items:center;gap:4px;border:1px solid #80602d;border-radius:4px;background:#f2cb68;color:#3f311e;padding:5px 8px;font-size:10px;font-weight:850;white-space:nowrap;box-shadow:0 2px #745325}
 .sol-convert-row button:disabled{opacity:.5;cursor:not-allowed}
 .convert-error{color:#b83f49}
+.canvas-host{display:grid;place-items:center;background:#000}
+.canvas-host canvas{width:auto!important;height:100%!important;max-width:100%;aspect-ratio:16 / 9}
+.main-column{display:flex;flex-direction:column;overflow-y:auto}
+.market-strip,.arena,.deck-bar,.positions-panel{flex-shrink:0}
+.arena{height:auto;aspect-ratio:16 / 9;min-height:0}
