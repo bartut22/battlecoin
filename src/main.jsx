@@ -15,11 +15,11 @@ function Root() {
   const [user, setUser] = useState(initialUser)
   const onLogout = () => { logout(); setUser(null) }
   const onAuth = (result) => {
-    setUser({ username: result.username, wallet: result.wallet })
+    setUser({ username: result.username, userId: result.userId, wallet: result.wallet })
     if (result.isNew && result.wallet) airdrop(result.wallet).catch(() => {})
   }
   return user
-    ? <App user={user.username} wallet={user.wallet} onLogout={onLogout} />
+    ? <App user={user.username} userId={user.userId} wallet={user.wallet} onLogout={onLogout} />
     : <LoginScreen onAuth={onAuth} />
 }
 

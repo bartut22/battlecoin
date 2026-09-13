@@ -29,16 +29,16 @@ export async function signup(username, password) {
   const wallet = createWallet()
   const result = await request('/signup', { username, password, ...wallet })
   if (result.error) return result
-  localStorage.setItem(SESSION_KEY, JSON.stringify({ username: result.username, wallet: result.wallet }))
-  return { username: result.username, wallet: result.wallet, isNew: true }
+  localStorage.setItem(SESSION_KEY, JSON.stringify({ username: result.username, userId: result.id, wallet: result.wallet }))
+  return { username: result.username, userId: result.id, wallet: result.wallet, isNew: true }
 }
 
 export async function login(username, password) {
   username = username.trim()
   const result = await request('/login', { username, password })
   if (result.error) return result
-  localStorage.setItem(SESSION_KEY, JSON.stringify({ username: result.username, wallet: result.wallet }))
-  return { username: result.username, wallet: result.wallet }
+  localStorage.setItem(SESSION_KEY, JSON.stringify({ username: result.username, userId: result.id, wallet: result.wallet }))
+  return { username: result.username, userId: result.id, wallet: result.wallet }
 }
 
 export function logout() {

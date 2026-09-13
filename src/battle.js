@@ -1,14 +1,28 @@
-import { Application, Assets, Container, Graphics, Sprite, Text, Rectangle, Texture } from 'pixi.js'
+import { Application, Assets, BitmapFont, BitmapText, Container, Graphics, Sprite, Rectangle, Texture } from 'pixi.js'
 import { DEFAULT_CARD_VALUES, DEFAULT_MARKET, marketCoverage, notionalCharacters } from './market-engine.js'
 import { createLedger } from './simulation.js'
 import { loadCharacterArt } from './character-art.js'
 import { bidRanks, bidAtPoint, frontX } from './frontline.js'
 export const CARDS = DEFAULT_CARD_VALUES
 const W=1600,H=900,LEFT=280,RIGHT=1355,TOP=110,BOTTOM=790
-export async function createBattle(host,onChange,config={}) {
+const PIXEL_FONT='Press Start 2P',PIXEL_FONT_SIZE=48
+const PIXEL_FONT_COLORS=['#fff','#fff5b3','#ffdc85','#baffcb','#ffd1d4','#a4ffc0','#ffc1c5','#ffe48a','#fff7dc']
+async function installPixelFont(){
+  try{await document.fonts.load(`${PIXEL_FONT_SIZE}px "${PIXEL_FONT}"`)}catch{/* fall back to whatever the browser has */}
+  for(const color of PIXEL_FONT_COLORS){
+    BitmapFont.install({
+      name:'ArenaPixel-'+color.slice(1),
+      style:{fontFamily:PIXEL_FONT,fontSize:PIXEL_FONT_SIZE,fill:color,stroke:{color:'#182718',width:8}},
+      chars:[[' ','~']],
+      textureStyle:{scaleMode:'nearest'},
+    })
+  }
+}
+export async function createBattle(host,onChange,config={},recordTrade=()=>{}) {
   const app=new Application()
   await app.init({width:W,height:H,antialias:true,resolution:Math.min(devicePixelRatio,2),autoDensity:true,background:'#345536'})
   host.appendChild(app.canvas)
+  await installPixelFont()
   let assets
   try {assets=await Promise.all(['/assets/arena-sand-left-trees.png','/assets/golem_green.json','/assets/golem_red.json','/assets/green_balloon_shaded.png','/assets/red_balloon_shaded.png','/assets/tower_primary_green.png','/assets/tower_primary_red.png'].map(path=>Assets.load(path)))}
   catch(error){app.destroy(true,{children:true});throw error}
@@ -28,7 +42,7 @@ export async function createBattle(host,onChange,config={}) {
   let orderSide=config.orderSide||'UP', bombId=0
   let selected=-1,elapsed=0,lastUi=0,message='',messageUntil=0,drawnFair=.5,targetFair=.5,marketId=null,hover=null
   const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches
-  const text=(value,size=16,color='#fff')=>new Text({text:value,style:{fontFamily:'Arial',fontSize:size,fontWeight:'600',fill:color,stroke:{color:'#182718',width:3}}})
+  const text=(value,size=16,color='#fff')=>new BitmapText({text:value,style:{fontFamily:'ArenaPixel-'+color.slice(1),fontSize:size}})
   const hoverLabel=text('',20,'#fff5b3');hoverLabel.anchor.set(.5);hoverLabel.visible=false;app.stage.addChild(hoverLabel)
   function addUnit(key,side,x,y,own=false,kind='scout'){
     const wrap=new Container(),texture=characterTextures[side][kind]
@@ -98,8 +112,12 @@ export async function createBattle(host,onChange,config={}) {
     }
   }
   function showMessage(value){message=value;messageUntil=elapsed+3;publish()}
+  function record(kind,side,priceCents,notionalUsd,marketSlugOverride){
+    recordTrade({kind,side,priceCents,notionalUsd,marketSlug:marketSlugOverride||market.slug||null})
+  }
   function cancelOrder(id){
-    if(ledger.cancel(id)){const unit=units.get(id);if(unit)retreat(unit);showMessage('Order cancelled. Reserved capital returned.')}
+    const order=ledger.open.find(o=>o.id===id)
+    if(ledger.cancel(id)){const unit=units.get(id);if(unit)retreat(unit);showMessage('Order cancelled. Reserved capital returned.');if(order)record('cancel',order.side,order.price,order.notional)}
   }
   function closePosition(id){
     const position=ledger.positions.find(p=>p.id===id)
@@ -108,7 +126,9 @@ export async function createBattle(host,onChange,config={}) {
     let remaining=position.quantity,proceeds=0
     for(const level of bids){const quantity=Math.min(remaining,Number(level.size));proceeds+=quantity*Number(level.price);remaining-=quantity;if(remaining<1e-8)break}
     if(remaining>1e-8){showMessage('Insufficient bid liquidity to close this position');return}
-    ledger.close(id,proceeds/position.quantity*100);showMessage('Simulated position closed at available bids')
+    const closePrice=proceeds/position.quantity*100
+    ledger.close(id,closePrice);showMessage('Simulated position closed at available bids')
+    record('close',position.side,closePrice,proceeds)
   }
   function tradeFlight(trade,own=false,point=null){
     if(flights.length>=12 && !own)return
@@ -150,17 +170,20 @@ export async function createBattle(host,onChange,config={}) {
       let remaining=Number(trade.size)
       for(const order of [...ledger.open].sort((a,b)=>b.price-a.price)){
         if(order.marketId!==market.marketId||order.side!==trade.side||order.price<trade.price*100)continue
+        const side=order.side
         const filled=ledger.fill(order.id,remaining,trade.price*100);remaining-=filled
+        if(filled>0)record('open',side,trade.price*100,filled*trade.price)
         if(!ledger.open.some(o=>o.id===order.id)){const unit=units.get(order.id);if(unit)retreat(unit)}
         if(remaining<=0)break
       }
     }
   }
   function setMarket(next){
+    const previousSlug=market.slug
     market=next.market||market;cards=next.cards||cards
     orderSide=next.orderSide||orderSide
     if(market.marketId!==marketId){
-      for(const order of [...ledger.open])ledger.cancel(order.id,'expired')
+      for(const order of [...ledger.open]){record('cancel',order.side,order.price,order.notional,previousSlug);ledger.cancel(order.id,'expired')}
       for(const unit of [...units.values()])retreat(unit)
       marketId=market.marketId;seenTrades.clear()
     }
@@ -197,7 +220,7 @@ export async function createBattle(host,onChange,config={}) {
         remaining-=cost;if(remaining<1e-8)break
       }
       if(remaining>1e-6||card.notional>ledger.available){showMessage('Insufficient capital or ask liquidity');return}
-      for(const fill of fills){const o=ledger.place(side,fill.price,fill.cost,marketId);if(o)ledger.fill(o.id,o.quantity,fill.price)}
+      for(const fill of fills){const o=ledger.place(side,fill.price,fill.cost,marketId);if(o){ledger.fill(o.id,o.quantity,fill.price);record('open',side,fill.price,fill.cost)}}
       tradeFlight({side,direction:'BUY',price:fills[0].price/100,notional:card.notional},true,p)
       showMessage('Simulated taker filled at available asks')
     }else{

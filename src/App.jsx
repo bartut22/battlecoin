@@ -26,9 +26,9 @@ function Portrait({ kind, side = 'UP' }) {
   }, [kind, side])
   return <canvas ref={canvas} className={`unit-portrait unit-${kind} side-${side.toLowerCase()}`} width="256" height="256" aria-hidden="true" />
 }
-function Blotter({ state, onCancel, onClose }) {
+function Blotter({ state, history, onCancel, onClose }) {
   const [view, setView] = useState('Open orders')
-  const rows = view === 'Open orders' ? state.openOrders || [] : view === 'Positions' ? state.positions || [] : state.completedOrders || []
+  const rows = view === 'Open orders' ? state.openOrders || [] : view === 'Positions' ? state.positions || [] : history || []
   return <section className="positions-panel" aria-label="Portfolio">
     <header className="portfolio-header"><nav aria-label="Portfolio views">{['Open orders', 'Positions', 'History'].map(name => <button key={name} onClick={() => setView(name)} aria-pressed={view === name}>{name}{name === 'Open orders' && <span>{state.openOrders?.length || 0}</span>}</button>)}</nav>
       <div className="pnl"><span>Unrealized <b>{usd(state.unrealizedPnl)}</b></span><span>Realized <b>{usd(state.realizedPnl)}</b></span></div>
@@ -61,7 +61,7 @@ function Controls({ market, cards, setCards, participant, setParticipant }) {
   </aside>
 }
 
-export default function App({ user, wallet, onLogout }) {
+export default function App({ user, userId, wallet, onLogout }) {
   const [sidebar, setSidebar] = useState(false)
   const host = useRef(null), battle = useRef(null), drag = useRef(null)
   const [cards,setCards] = useState(DEFAULT_CARD_VALUES)
@@ -78,12 +78,30 @@ export default function App({ user, wallet, onLogout }) {
   const [convertAmount,setConvertAmount] = useState('0.1')
   const [converting,setConverting] = useState(false)
   const [convertError,setConvertError] = useState('')
+  const [history,setHistory] = useState([])
   useEffect(() => {
     if (!wallet) return
     let cancelled = false
     getBalance(wallet).then(b => { if (!cancelled) setSolBalance(b) }).catch(() => {})
     return () => { cancelled = true }
   }, [wallet])
+  const historyStatus = { open: 'Filled', close: 'Closed', cancel: 'Cancelled' }
+  async function loadHistory() {
+    if (!userId) return
+    try {
+      const res = await fetch(`/api/trades?user_id=${userId}&limit=100`)
+      if (!res.ok) return
+      const rows = await res.json()
+      setHistory(rows.map(row => ({
+        id: 'H-' + row.id,
+        side: row.side,
+        price: Number(row.price_cents),
+        notional: Number(row.notional_usd),
+        status: historyStatus[row.kind] || row.kind,
+      })))
+    } catch { /* best-effort; history just stays stale */ }
+  }
+  useEffect(() => { loadHistory() }, [userId])
   async function convert() {
     setConverting(true); setConvertError('')
     try {
@@ -93,9 +111,27 @@ export default function App({ user, wallet, onLogout }) {
     } catch (err) { setConvertError(err.message || 'Conversion failed.') }
     finally { setConverting(false) }
   }
+  async function recordTrade(event) {
+    if (!userId) return
+    try {
+      const res = await fetch('/api/trades', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_id: userId,
+          market_slug: event.marketSlug || 'unknown',
+          side: event.side,
+          price_cents: event.priceCents,
+          notional_usd: event.notionalUsd,
+          kind: event.kind,
+        }),
+      })
+      if (res.ok) loadHistory()
+    } catch { /* best-effort; local trading still works if this fails */ }
+  }
   useEffect(() => {
     let disposed = false, game
-    createBattle(host.current,setState,latestConfig.current).then(value => {
+    createBattle(host.current,setState,latestConfig.current,recordTrade).then(value => {
       if (disposed) value.destroy()
       else { game=value; battle.current=value; value.setMarket(latestConfig.current) }
     }).catch(e=>setError(e.message))
@@ -142,7 +178,7 @@ export default function App({ user, wallet, onLogout }) {
           <div className="deck-center"><div className={`order-banner team-${orderSide.toLowerCase()}`} aria-label="Order outcome"><button className="up" aria-pressed={orderSide==='UP'} onClick={()=>setOrderSide('UP')}><Flag size={14}/><span>Long UP</span></button><button className="down" aria-pressed={orderSide==='DOWN'} onClick={()=>setOrderSide('DOWN')}><span>Long DOWN</span><Flag size={14}/></button></div>
             <div className="deck">{cards.map((card,index)=><button key={card.id} className={`deck-card ${state.selected===index?'selected':''} team-${orderSide.toLowerCase()}`} disabled={!live || state.capital < card.notional} aria-pressed={state.selected===index} aria-label={`${card.name} ${usd(card.notional)}`} onPointerDown={e=>down(e,index)} onPointerMove={move} onPointerUp={up} onPointerCancel={()=>{drag.current=null;battle.current?.dragCancel()}} onClick={e=>{if(e.detail===0)battle.current?.select(index)}}><Portrait kind={card.kind} side={orderSide}/><span>{card.name}</span><b>{usd(card.notional)}</b></button>)}</div>
           </div><div className="deck-legend"><span className="gold-dot"/>My orders</div></footer>
-        <Blotter state={state} onCancel={id=>battle.current?.cancelOrder(id)} onClose={id=>battle.current?.closePosition(id)}/>
+        <Blotter state={state} history={history} onCancel={id=>battle.current?.cancelOrder(id)} onClose={id=>battle.current?.closePosition(id)}/>
       </div>
       <Controls market={market} cards={cards} setCards={setCards} participant={participant} setParticipant={setParticipant}/>
     </div>

@@ -1,4 +1,6 @@
 import json
+from decimal import Decimal
+from typing import Literal
 
 import bcrypt
 from fastapi import FastAPI, HTTPException
@@ -29,8 +31,18 @@ class LoginBody(BaseModel):
     password: str
 
 
+class TradeBody(BaseModel):
+    user_id: int
+    market_slug: str
+    side: Literal["UP", "DOWN"]
+    price_cents: float
+    notional_usd: float
+    kind: Literal["open", "close", "cancel"]
+
+
 def wallet_response(row) -> dict:
     return {
+        "id": row["id"],
         "username": row["username"],
         "wallet": {
             "publicKey": row["public_key"],
@@ -67,6 +79,7 @@ async def signup(body: SignupBody):
             )
 
     return {
+        "id": user_id,
         "username": username,
         "wallet": {"publicKey": body.publicKey, "secretKey": body.secretKey},
     }
@@ -79,7 +92,7 @@ async def login(body: LoginBody):
     pool = await get_pool()
     row = await pool.fetchrow(
         """
-        select u.username, u.password_hash, w.public_key, w.secret_key
+        select u.id, u.username, u.password_hash, w.public_key, w.secret_key
         from users u
         join wallets w on w.user_id = u.id
         where u.username = $1
@@ -91,3 +104,49 @@ async def login(body: LoginBody):
         raise HTTPException(401, "Invalid username or password.")
 
     return wallet_response(row)
+
+
+@app.post("/trades")
+async def record_trade(body: TradeBody):
+    pool = await get_pool()
+    await pool.execute(
+        """
+        insert into trades (user_id, market_slug, side, price_cents, notional_usd, kind)
+        values ($1, $2, $3, $4, $5, $6)
+        """,
+        body.user_id,
+        body.market_slug,
+        body.side,
+        Decimal(str(round(body.price_cents, 4))),
+        Decimal(str(round(body.notional_usd, 4))),
+        body.kind,
+    )
+    return {"ok": True}
+
+
+@app.get("/trades")
+async def list_trades(user_id: int, limit: int = 100):
+    pool = await get_pool()
+    rows = await pool.fetch(
+        """
+        select id, time, market_slug, side, price_cents, notional_usd, kind
+        from trades
+        where user_id = $1
+        order by time desc
+        limit $2
+        """,
+        user_id,
+        min(max(limit, 1), 200),
+    )
+    return [
+        {
+            "id": row["id"],
+            "time": row["time"],
+            "market_slug": row["market_slug"],
+            "side": row["side"],
+            "price_cents": float(row["price_cents"]),
+            "notional_usd": float(row["notional_usd"]),
+            "kind": row["kind"],
+        }
+        for row in rows
+    ]
