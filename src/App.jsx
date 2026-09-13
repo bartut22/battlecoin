@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { CircleHelp, Plus, RefreshCw, X, ExternalLink, Settings2, BookOpen, Users } from 'lucide-react'
+import { CircleHelp, Plus, Minus, RefreshCw, X, ExternalLink, Settings2, BookOpen, Users } from 'lucide-react'
 import { createBattle } from './battle.js'
 import { loadCharacterArt, TROOP_KINDS } from './character-art.js'
 import usePolymarket from './usePolymarket.js'
@@ -7,12 +7,14 @@ import { DEFAULT_CARD_VALUES, DEFAULT_TAKER_VALUES, editableCard, marketCoverage
 
 const usd = value => Number(value || 0).toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 2 })
 const cents = value => value == null ? '--' : Number(value).toFixed(1).replace(/\.0$/, '') + 'c'
+const btc = value => value == null ? '--' : '$' + Number(value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 const tutorialKey = 'battlecoin-market-arena-tutorial-v2'
+function CoinLogo() { return <span className="coin-logo" aria-label="Battlecoin"><img src="/assets/logo.png" alt="" /></span> }
 function Portrait({ kind, side = 'UP' }) {
   const canvas = useRef(null)
   useEffect(() => {
     let active = true
-    if (kind !== 'balloon') loadCharacterArt().then(frames => {
+    loadCharacterArt().then(frames => {
       if (!active || !canvas.current) return
       const ctx = canvas.current.getContext('2d')
       ctx.clearRect(0, 0, 256, 256)
@@ -20,7 +22,6 @@ function Portrait({ kind, side = 'UP' }) {
     }).catch(() => {})
     return () => { active = false }
   }, [kind, side])
-  if (kind === 'balloon') return <img className="unit-portrait balloon-portrait" src={side === 'UP' ? '/assets/green_balloon_shaded.png' : '/assets/red_balloon_shaded.png'} alt="" />
   return <canvas ref={canvas} className={`unit-portrait unit-${kind}`} width="256" height="256" aria-hidden="true" />
 }
 function Blotter({ state, onCancel, onClose }) {
@@ -39,11 +40,18 @@ function Controls({ market, cards, setCards, participant, setParticipant }) {
   const [side, setSide] = useState('UP')
   const rows = orderbookRows(market).filter(row => row.side === side)
   const unitValue = participant[side]
+  const resolutionSteps = [5, 10, 25, 50, 100, 250, 500]
+  const changeResolution = direction => setParticipant(current => {
+    const value=current[side], index=resolutionSteps.findIndex(step=>step>=value)
+    const next=resolutionSteps[Math.max(0,Math.min(resolutionSteps.length-1,(index<0?resolutionSteps.length-1:index)+direction))]
+    return {...current,[side]:next}
+  })
   return <aside className="control-rail" aria-label="Market and card settings">
     <nav className="rail-tabs" aria-label="Market settings views">{[['Book',BookOpen],['My cards',Settings2],['Participants',Users]].map(([label,Icon]) => <button key={label} aria-pressed={view === label} onClick={() => setView(label)} title={label}><Icon size={16}/><span>{label}</span></button>)}</nav>
     {view === 'Book' && <section className="rail-section"><div className="section-heading"><h2>Order book</h2><small>L2 depth</small></div>
       <div className="segmented">{['UP','DOWN'].map(value => <button className={value.toLowerCase()} key={value} aria-pressed={side === value} onClick={() => setSide(value)}>{value === 'UP' ? 'Yes / Up' : 'No / Down'}</button>)}</div>
-      <div className="quote-pair"><div><small>Best bid</small><b>{cents(side === 'UP' ? market.bidUp : market.bidDown)}</b></div><div><small>Best ask</small><b>{cents(side === 'UP' ? market.askUp : market.askDown)}</b></div></div>
+      <div className="quote-pair"><div className="bid-quote"><small>BUY / BID</small><b>{cents(side === 'UP' ? market.bidUp : market.bidDown)}</b></div><div className="ask-quote"><small>SELL / ASK</small><b>{cents(side === 'UP' ? market.askUp : market.askDown)}</b></div></div>
+      <div className="resolution-control"><div><strong>Character resolution</strong><small>One unit represents</small></div><div className="stepper"><button className="icon-button" onClick={()=>changeResolution(-1)} title="More precise" aria-label="Increase character precision"><Minus size={15}/></button><b>{usd(unitValue)}</b><button className="icon-button" onClick={()=>changeResolution(1)} title="Fewer characters" aria-label="Decrease character precision"><Plus size={15}/></button></div></div>
       {['ask','bid'].map(type => <div className="book-group" key={type}><h3>{type === 'bid' ? 'Bids' : 'Asks'}</h3><table><thead><tr><th>Price</th><th>Notional</th><th>From line</th><th>Units</th></tr></thead><tbody>{rows.filter(row => row.type === type).slice(0,8).map(row => <tr key={row.id} className={type}><td>{cents(row.price)}</td><td>{usd(row.notional)}</td><td>{cents(row.distanceCents)}</td><td>{Math.ceil(row.notional / unitValue)}</td></tr>)}</tbody></table></div>)}
       {!rows.length && <p className="empty-state">Waiting for market depth</p>}
     </section>}
@@ -96,11 +104,11 @@ export default function App() {
     drag.current=null
   }
   return <main className="exchange">
-    <header className="exchange-header"><div className="brand">BATTLECOIN<span>BTC Up or Down</span></div><div className={`feed-status ${market.feedStatus}`} title={market.feedMessage}><i/>{live ? 'Live Polymarket' : market.feedStatus}</div><span className="sim-badge">Simulated funds</span><button className="icon-button" title="Tutorial" aria-label="Tutorial" onClick={()=>setTutorial(true)}><CircleHelp size={18}/></button></header>
+    <header className="exchange-header"><CoinLogo/><div className="header-market"><b>BTC arena</b><span>Polymarket simulation</span></div><div className={`feed-status ${market.feedStatus}`} title={market.feedMessage}><i/>{live ? 'Live market' : market.feedStatus}</div><span className="sim-badge">Simulated funds</span><button className="icon-button" title="Tutorial" aria-label="Tutorial" onClick={()=>setTutorial(true)}><CircleHelp size={18}/></button></header>
     <div className="workspace">
       <div className="main-column">
-        <header className="market-strip"><div className="outcome positive"><small>YES / UP</small><strong>{coverage.available ? cents(coverage.upCents) : '--'}</strong></div><div className="market-title"><a href={market.slug ? `https://polymarket.com/event/${market.slug}` : 'https://polymarket.com'} target="_blank" rel="noreferrer">{market.title || 'Finding current BTC market'}<ExternalLink size={12}/></a><span>{coverage.source} <b>{Math.floor((state.time||0)/60)}:{String((state.time||0)%60).padStart(2,'0')}</b></span></div><div className="outcome negative"><small>NO / DOWN</small><strong>{coverage.available ? cents(coverage.downCents) : '--'}</strong></div></header>
-        <section className="arena" aria-label="Live market arena"><div className="canvas-host" ref={host}/>{!live && <div className="feed-notice" role="status"><span>{market.feedMessage}</span><button className="icon-button" title="Reconnect" aria-label="Reconnect" onClick={retry}><RefreshCw size={16}/></button></div>}{state.message && <div className="arena-toast" role="status">{state.message}</div>}{error && <div className="feed-notice" role="alert">{error}</div>}</section>
+        <header className="market-strip"><div className="outcome positive"><small>YES / UP</small><strong>{coverage.available ? cents(coverage.upCents) : '--'}</strong><span>Bid {cents(market.bidUp)} · Ask {cents(market.askUp)}</span></div><div className="market-center"><a href={market.slug ? `https://polymarket.com/event/${market.slug}` : 'https://polymarket.com'} target="_blank" rel="noreferrer">{market.title || 'BTC Up or Down'}<ExternalLink size={12}/></a><div className="market-metrics"><div title={market.referenceApproximate?'Captured from live Polymarket RTDS after this round opened':'Opening Polymarket RTDS reference'}><small>Price to beat</small><b>{btc(market.priceToBeat)}</b></div><div><small>Distance</small><b className={(market.currentBtc||0)>=(market.priceToBeat||Infinity)?'positive':'negative'}>{market.currentBtc!=null&&market.priceToBeat!=null?(market.currentBtc-market.priceToBeat>=0?'+':'')+btc(market.currentBtc-market.priceToBeat):'--'}</b></div><div><small>Time remaining</small><b>{Math.floor((state.time||0)/60)}:{String((state.time||0)%60).padStart(2,'0')}</b></div></div></div><div className="outcome negative"><small>NO / DOWN</small><strong>{coverage.available ? cents(coverage.downCents) : '--'}</strong><span>Bid {cents(market.bidDown)} · Ask {cents(market.askDown)}</span></div></header>
+        <section className="arena" aria-label="Live market arena"><div className="canvas-host" ref={host}/>{market.feedStatus==='unavailable' && <div className="feed-notice" role="status"><span>{market.feedMessage}</span><button className="icon-button" title="Reconnect" aria-label="Reconnect" onClick={retry}><RefreshCw size={16}/></button></div>}{state.message && <div className="arena-toast" role="status">{state.message}</div>}{error && <div className="feed-notice" role="alert">{error}</div>}</section>
         <footer className="deck-bar"><div className="capital"><small>Elixir capital</small><b>{usd(state.capital)}</b><button onClick={()=>battle.current?.depositCapital(100)}><Plus size={14}/>Deposit $100</button></div>
           <div className="deck-center"><div className="order-side" aria-label="Order outcome">{['UP','DOWN'].map(side=><button key={side} className={side.toLowerCase()} aria-pressed={orderSide===side} onClick={()=>setOrderSide(side)}>{side==='UP'?'Long UP':'Long DOWN'}</button>)}</div>
             <div className="deck">{cards.map((card,index)=><button key={card.id} className={`deck-card ${state.selected===index?'selected':''} team-${orderSide.toLowerCase()}`} disabled={!live || state.capital < card.notional} aria-pressed={state.selected===index} aria-label={`${card.name} ${usd(card.notional)}`} onPointerDown={e=>down(e,index)} onPointerMove={move} onPointerUp={up} onPointerCancel={()=>{drag.current=null;battle.current?.dragCancel()}} onClick={e=>{if(e.detail===0)battle.current?.select(index)}}><Portrait kind={card.kind} side={orderSide}/><span>{card.name}</span><b>{usd(card.notional)}</b></button>)}</div>

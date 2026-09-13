@@ -12,6 +12,11 @@ const proxy = {
     changeOrigin: true,
     rewrite: path => path.replace(/^\/clob/, ''),
   },
+  '/poly': {
+    target: 'https://polymarket.com',
+    changeOrigin: true,
+    rewrite: path => path.replace(/^\/poly/, ''),
+  },
 }
 
 export default defineConfig({

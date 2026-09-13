@@ -1,8 +1,8 @@
 export const DEFAULT_CARD_VALUES = [
-  { id: 'limit-scout', name: 'Ranger', kind: 'scout', notional: 5, hp: 280, damage: 58, speed: 54, count: 1 },
-  { id: 'wall-guard', name: 'Guardian', kind: 'guard', notional: 10, hp: 360, damage: 68, speed: 38, count: 1 },
-  { id: 'taker-balloon', name: 'Balloon', kind: 'balloon', notional: 20, hp: 720, damage: 230, speed: 24, count: 1 },
-  { id: 'anchor-maker', name: 'Crystal Golem', kind: 'anchor', notional: 25, hp: 940, damage: 132, speed: 27, count: 1 },
+  { id: 'limit-scout', name: 'Dune Ranger', kind: 'scout', notional: 5, hp: 280, damage: 58, speed: 54, count: 1 },
+  { id: 'wall-guard', name: 'Sand Guard', kind: 'guard', notional: 10, hp: 360, damage: 68, speed: 38, count: 1 },
+  { id: 'taker-balloon', name: 'Sand Bomber', kind: 'balloon', notional: 20, hp: 720, damage: 230, speed: 24, count: 1 },
+  { id: 'anchor-maker', name: 'Rune Golem', kind: 'anchor', notional: 25, hp: 940, damage: 132, speed: 27, count: 1 },
 ]
 export const DEFAULT_TAKER_VALUES = { up: [25, 10, 5], down: [25, 10, 5] }
 export const DEFAULT_MARKET = {

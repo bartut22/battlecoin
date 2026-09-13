@@ -2,6 +2,41 @@
 
 Generated with the built-in image-generation tool for this project.
 
+## Sand Arena Revision
+
+- `sand-troops-pixel.png`: 1536 x 1024 chroma-key atlas with four distinct sand units in UP and DOWN variants.
+- `arena-sand-left-trees.png`: portrait arena source prepared for Pixi's clockwise rotation, producing trees on the game-view left and a clear right edge.
+- Both assets were generated with the built-in image-generation tool and are loaded directly by the runtime.
+
+### Sand Troop Atlas Prompt
+
+Use case: stylized-concept. Asset type: production 2D pixel-art game sprite atlas. Create one
+1536x1024 PNG with exactly 4 equal columns and 2 equal rows. Pure opaque chroma-key magenta #FF00FF
+background, perfectly flat and uniform outside silhouettes and between limbs; no gradient, glow, floor,
+shadow, text, borders, or checkerboard. Each cell contains exactly one full-body character, centered
+with generous magenta padding and no cropping. Top row UP team uses turquoise cloth and lapis details;
+bottom row DOWN team is the exact matched character in coral-red cloth and ruby details. ALL characters
+are made primarily from warm sandstone, sand, clay, rope and small gold details. Deliberately crisp
+32-bit pixel art with visible block pixels, strong readable silhouettes, isometric/front three-quarter
+casual strategy-game view, readable at 40px. Column 1: slim sand ranger with sandstone hood, compact bow
+and quiver. Column 2: broad sand guardian with square stone shield and short spear. Column 3: sand bomber
+balloon with compact hot-air balloon above, woven basket and one clearly visible round bomb. Column 4:
+huge chunky sand golem with blocky fists and carved rune. Keep every cell visually distinct by silhouette.
+No anti-aliased painterly 3D rendering; unmistakably pixelated game sprites.
+
+### Final Sand Arena Prompt
+
+Use case: precise-object-edit. This portrait arena is rotated 90 degrees clockwise by the game renderer.
+Preserve the exact canvas, camera, playable grid, walls, two vertical paths, river, single wide bridge,
+rocks, banners, lighting and geometry. To make the final rotated game view tree-heavy on the left and
+tree-free on the right, remove every palm tree, trunk, frond, leafy canopy and log from the entire top
+perimeter and upper corners of this portrait source image. The entire top perimeter outside the wall
+must be clean sand and sandstone with only sparse low flowers and rocks. Move all removed tree mass to
+the bottom perimeter and lower corners of this portrait source, behind the wall and never covering the
+playable grid, gate, river or bridge. Also remove trees along the portrait source's left and right side
+edges except where they naturally join the bottom corners. Required source orientation: top edge has
+zero trees; bottom edge has a lush continuous palm cluster. No characters, text, logos or UI.
+
 ## Final Assets
 
 - `arena-wide-bridge.png`: edited arena with one uninterrupted bridge deck joining the original two crossings.

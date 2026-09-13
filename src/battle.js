@@ -10,12 +10,14 @@ export async function createBattle(host,onChange,config={}) {
   await app.init({width:W,height:H,antialias:true,resolution:Math.min(devicePixelRatio,2),autoDensity:true,background:'#345536'})
   host.appendChild(app.canvas)
   let assets
-  try {assets=await Promise.all(['/assets/arena-wide-bridge.png','/assets/golem_green.json','/assets/golem_red.json','/assets/green_balloon_shaded.png','/assets/red_balloon_shaded.png','/assets/tower_primary_green.png','/assets/tower_primary_red.png'].map(path=>Assets.load(path)))}
+  try {assets=await Promise.all(['/assets/arena-sand-left-trees.png','/assets/golem_green.json','/assets/golem_red.json','/assets/green_balloon_shaded.png','/assets/red_balloon_shaded.png','/assets/tower_primary_green.png','/assets/tower_primary_red.png'].map(path=>Assets.load(path)))}
   catch(error){app.destroy(true,{children:true});throw error}
   const background=new Sprite(assets[0]);background.width=H;background.height=W;background.rotation=Math.PI/2;background.x=W;app.stage.addChild(background)
   let art
   try { art = await loadCharacterArt() } catch (error) { app.destroy(true,{children:true});throw error }
-  const characterTextures = Object.fromEntries(['UP','DOWN'].map(side=>[side,Object.fromEntries(Object.entries(art[side]).map(([kind,canvas])=>[kind,Texture.from(canvas)]))]))
+  const characterTextures = Object.fromEntries(['UP','DOWN'].map(side=>[side,Object.fromEntries(Object.entries(art[side]).map(([kind,canvas])=>{
+    const texture=Texture.from(canvas);texture.source.scaleMode='nearest';return [kind,texture]
+  }))]))
   const shade=new Graphics(),lines=new Graphics(),field=new Container(),labels=new Container(),preview=new Graphics()
   field.sortableChildren=true
   app.stage.addChild(shade,lines,field,labels,preview)
@@ -28,7 +30,7 @@ export async function createBattle(host,onChange,config={}) {
   const text=(value,size=16,color='#fff')=>new Text({text:value,style:{fontFamily:'Arial',fontSize:size,fontWeight:'600',fill:color,stroke:{color:'#182718',width:3}}})
   const hoverLabel=text('',20,'#fff5b3');hoverLabel.anchor.set(.5);hoverLabel.visible=false;app.stage.addChild(hoverLabel)
   function addUnit(key,side,x,y,own=false,kind='scout'){
-    const wrap=new Container(),texture=kind==='balloon'?assets[side==='UP'?3:4]:characterTextures[side][kind]
+    const wrap=new Container(),texture=characterTextures[side][kind]
     const sprite=new Sprite(texture);sprite.anchor.set(.5,1)
     const height=own?(kind==='balloon'?86:68):48
     sprite.height=height;sprite.scale.x=Math.abs(sprite.scale.y)
@@ -113,12 +115,16 @@ export async function createBattle(host,onChange,config={}) {
     const targetPrice=targetSide===trade.side?trade.price*100:100-trade.price*100
     const candidates=[...units.values()].filter(u=>u.side===targetSide&&u.key.startsWith('book:'))
     const target=candidates.sort((a,b)=>Math.abs((a.bookPrice||0)-targetPrice)-Math.abs((b.bookPrice||0)-targetPrice))[0]
-    const sprite=new Container(),balloon=new Sprite(assets[trade.side==='UP'?3:4])
+    const sprite=new Container(),balloon=new Sprite(characterTextures[trade.side].balloon)
     balloon.anchor.set(.5,1);balloon.height=90;balloon.scale.x=balloon.scale.y
     if(own) for(const [x,y] of [[-3,0],[3,0],[0,-3],[0,3]]){
       const gold=new Sprite(balloon.texture);gold.anchor.copyFrom(balloon.anchor);gold.scale.copyFrom(balloon.scale);gold.tint=0xffdc69;gold.position.set(x,y);sprite.addChild(gold)
     }
-    sprite.addChild(balloon);field.addChild(sprite)
+    sprite.addChild(balloon)
+    const notional=Number(trade.notional)||(Number(trade.size)*Number(trade.price))
+    const sizeLabel=text((own?'MY TAKER ':'TAKER ')+(Number.isFinite(notional)?'$'+notional.toFixed(notional>=100?0:2):'--'),16,own?'#ffe48a':'#fff7dc')
+    sizeLabel.anchor.set(.5,1);sizeLabel.y=-94;sprite.addChild(sizeLabel)
+    field.addChild(sprite)
     flights.push({sprite,own,age:0,dropped:false,startX:trade.side==='UP'?150:1450,x:point?.x||target?.targetX||frontX(market),y:point?.y||target?.targetY||450,target})
   }
   function dropBomb(flight){
@@ -191,7 +197,7 @@ export async function createBattle(host,onChange,config={}) {
       }
       if(remaining>1e-6||card.notional>ledger.available){showMessage('Insufficient capital or ask liquidity');return}
       for(const fill of fills){const o=ledger.place(side,fill.price,fill.cost,marketId);if(o)ledger.fill(o.id,o.quantity,fill.price)}
-      tradeFlight({side,direction:'BUY',price:fills[0].price/100},true)
+      tradeFlight({side,direction:'BUY',price:fills[0].price/100,notional:card.notional},true,p)
       showMessage('Simulated taker filled at available asks')
     }else{
       const rounded=picked.price
@@ -223,7 +229,7 @@ export async function createBattle(host,onChange,config={}) {
       hoverLabel.visible=!!picked
       if(picked){
         preview.roundRect(picked.x-25,Math.round(hover.y/41)*41-45,50,50,8).fill({color:'#ffdf79',alpha:.35}).stroke({color:'#ffdf79',width:3})
-        hoverLabel.text=orderSide+' '+(cards[selected].kind==='balloon'?'TAKER':'BID '+picked.price.toFixed(1)+'c')+' | $'+cards[selected].notional
+        hoverLabel.text=cards[selected].name+'  |  '+orderSide+' '+(cards[selected].kind==='balloon'?'TAKER @ ASK':'BID @ '+picked.price.toFixed(1)+'c')+'  |  $'+cards[selected].notional
         hoverLabel.position.set(Math.max(LEFT+110,Math.min(RIGHT-110,picked.x)),Math.max(TOP+25,hover.y-90))
       }
     }else {preview.clear();hoverLabel.visible=false}
