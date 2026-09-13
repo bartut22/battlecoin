@@ -5,6 +5,7 @@ import { loadCharacterArt, TROOP_KINDS } from './character-art.js'
 import usePolymarket from './usePolymarket.js'
 import { DEFAULT_CARD_VALUES, DEFAULT_TAKER_VALUES, editableCard, marketCoverage, orderbookRows } from './market-engine.js'
 import Sidebar from './Sidebar.jsx'
+import { convertSolToCapital, getBalance, SOL_USD_RATE } from './solana.js'
 
 const usd = value => Number(value || 0).toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 2 })
 const cents = value => value == null ? '--' : Number(value).toFixed(1).replace(/\.0$/, '') + 'c'
@@ -70,6 +71,25 @@ export default function App({ user, wallet, onLogout }) {
   const [state,setState] = useState({capital:100,time:0,selected:-1,openOrders:[],completedOrders:[],positions:[]})
   const [tutorial,setTutorial] = useState(() => localStorage.getItem(tutorialKey) !== '1')
   const [remember,setRemember] = useState(false), [error,setError] = useState('')
+  const [solBalance,setSolBalance] = useState(null)
+  const [convertAmount,setConvertAmount] = useState('0.1')
+  const [converting,setConverting] = useState(false)
+  const [convertError,setConvertError] = useState('')
+  useEffect(() => {
+    if (!wallet) return
+    let cancelled = false
+    getBalance(wallet).then(b => { if (!cancelled) setSolBalance(b) }).catch(() => {})
+    return () => { cancelled = true }
+  }, [wallet])
+  async function convert() {
+    setConverting(true); setConvertError('')
+    try {
+      const { balance, usd: gained } = await convertSolToCapital(wallet, Number(convertAmount))
+      setSolBalance(balance)
+      battle.current?.depositCapital(gained)
+    } catch (err) { setConvertError(err.message || 'Conversion failed.') }
+    finally { setConverting(false) }
+  }
   useEffect(() => {
     let disposed = false, game
     createBattle(host.current,setState,latestConfig.current).then(value => {
@@ -105,7 +125,16 @@ export default function App({ user, wallet, onLogout }) {
       <div className="main-column">
         <header className="market-strip"><div className="outcome positive"><small>YES / UP</small><strong>{coverage.available ? cents(coverage.upCents) : '--'}</strong></div><div className="market-title"><a href={market.slug ? `https://polymarket.com/event/${market.slug}` : 'https://polymarket.com'} target="_blank" rel="noreferrer">{market.title || 'Finding current BTC market'}<ExternalLink size={12}/></a><span>{coverage.source} <b>{Math.floor((state.time||0)/60)}:{String((state.time||0)%60).padStart(2,'0')}</b></span></div><div className="outcome negative"><small>NO / DOWN</small><strong>{coverage.available ? cents(coverage.downCents) : '--'}</strong></div></header>
         <section className="arena" aria-label="Live market arena"><div className="canvas-host" ref={host}/>{!live && <div className="feed-notice" role="status"><span>{market.feedMessage}</span><button className="icon-button" title="Reconnect" aria-label="Reconnect" onClick={retry}><RefreshCw size={16}/></button></div>}{state.message && <div className="arena-toast" role="status">{state.message}</div>}{error && <div className="feed-notice" role="alert">{error}</div>}</section>
-        <footer className="deck-bar"><div className="capital"><small>Elixir capital</small><b>{usd(state.capital)}</b><button onClick={()=>battle.current?.depositCapital(100)}><Plus size={14}/>Deposit $100</button></div>
+        <footer className="deck-bar"><div className="capital"><small>Elixir capital</small><b>{usd(state.capital)}</b>
+          <div className="sol-convert">
+            <small>{solBalance == null ? 'Wallet: —' : `Wallet: ${solBalance} SOL`}</small>
+            <div className="sol-convert-row">
+              <input aria-label="SOL amount to convert" type="number" min="0" step="0.01" value={convertAmount} onChange={e=>setConvertAmount(e.target.value)} />
+              <button onClick={convert} disabled={converting || !wallet}><Plus size={14}/>{converting ? 'Converting…' : `Convert (${SOL_USD_RATE}/SOL)`}</button>
+            </div>
+            {convertError && <small className="convert-error">{convertError}</small>}
+          </div>
+        </div>
           <div className="deck-center"><div className="order-side" aria-label="Order outcome">{['UP','DOWN'].map(side=><button key={side} className={side.toLowerCase()} aria-pressed={orderSide===side} onClick={()=>setOrderSide(side)}>{side==='UP'?'Long UP':'Long DOWN'}</button>)}</div>
             <div className="deck">{cards.map((card,index)=><button key={card.id} className={`deck-card ${state.selected===index?'selected':''} team-${orderSide.toLowerCase()}`} disabled={!live || state.capital < card.notional} aria-pressed={state.selected===index} aria-label={`${card.name} ${usd(card.notional)}`} onPointerDown={e=>down(e,index)} onPointerMove={move} onPointerUp={up} onPointerCancel={()=>{drag.current=null;battle.current?.dragCancel()}} onClick={e=>{if(e.detail===0)battle.current?.select(index)}}><Portrait kind={card.kind} side={orderSide}/><span>{card.name}</span><b>{usd(card.notional)}</b></button>)}</div>
           </div><div className="deck-legend"><span className="gold-dot"/>My orders</div></footer>
@@ -113,7 +142,7 @@ export default function App({ user, wallet, onLogout }) {
       </div>
       <Controls market={market} cards={cards} setCards={setCards} participant={participant} setParticipant={setParticipant}/>
     </div>
-    {tutorial && <div className="modal-backdrop"><section className="tutorial-modal" role="dialog" aria-modal="true" aria-label="Simulated funds tutorial"><CircleHelp size={26}/><h2>Your market arena</h2><p>You start with $100 in simulated funds. Deposits add demo capital only.</p><ol><li>The boundary follows Polymarket's displayed UP probability.</li><li>Drag a card onto the UP or DOWN field to place a simulated order. Your units have gold outlines.</li><li>Change card amounts and the dollars represented by other participants in the right panel.</li></ol><p>Characters represent aggregated price levels, not individual traders. Retreats show liquidity removed; public depth cannot identify every cancellation.</p><label className="remember"><input type="checkbox" checked={remember} onChange={e=>setRemember(e.target.checked)}/>Don't show again</label><button className="primary-button" onClick={()=>{if(remember)localStorage.setItem(tutorialKey,'1');setTutorial(false)}}>Enter arena</button></section></div>}
+    {tutorial && <div className="modal-backdrop"><section className="tutorial-modal" role="dialog" aria-modal="true" aria-label="Simulated funds tutorial"><CircleHelp size={26}/><h2>Your market arena</h2><p>You start with $100 in simulated funds. Convert real devnet SOL from your wallet into more trading capital any time.</p><ol><li>The boundary follows Polymarket's displayed UP probability.</li><li>Drag a card onto the UP or DOWN field to place a simulated order. Your units have gold outlines.</li><li>Change card amounts and the dollars represented by other participants in the right panel.</li></ol><p>Characters represent aggregated price levels, not individual traders. Retreats show liquidity removed; public depth cannot identify every cancellation.</p><label className="remember"><input type="checkbox" checked={remember} onChange={e=>setRemember(e.target.checked)}/>Don't show again</label><button className="primary-button" onClick={()=>{if(remember)localStorage.setItem(tutorialKey,'1');setTutorial(false)}}>Enter arena</button></section></div>}
   </main>
   </>
 }
