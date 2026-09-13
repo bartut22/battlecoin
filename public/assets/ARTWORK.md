@@ -2,6 +2,26 @@
 
 Generated with the built-in image-generation tool for this project.
 
+## Wind Flags and Bomb Revision
+
+The existing `grounded-flags.png` is animated with a small cloth mesh; pole, attachment,
+and stone-base vertices remain fixed. No replacement flag artwork was needed.
+
+`bomb-pixel.png` was generated with the built-in image tool and copied into this directory
+from `exec-e8733427-845b-4910-b3b3-8fec7c08e993.png`. `src/bomb-art.js` removes the magenta
+backdrop once and crops the sprite for both battle and tutorial. Bomb fuse flicker, its
+shadow, smoke, embers, and full/partial impacts are code-rendered local effects. Final prompt:
+
+> Use case: stylized-concept. Asset type: one production pixel-art bomb sprite for a sand-themed
+> 16-bit fantasy strategy game. A compact dark charcoal iron bomb with a squat round body,
+> chunky stepped silhouette, warm bronze equatorial band, two tiny rivets, one crisp ivory
+> highlight, a short braided fuse curling up to the right with a small golden/orange spark.
+> Three-quarter view, readable at 28 pixels high. Restrained 12-color palette, authentic large
+> square pixel clusters, hard edges, no antialiasing, no smooth shading. One centered sprite
+> only, fits inside the central 80% of a square image, no text, no floor, no drop shadow, no
+> border or other objects. Perfectly flat opaque saturated magenta #FF00FF backdrop for
+> chroma-key removal. No magenta in the bomb or fuse. Professional game sprite, not photoreal.
+
 ## Pixel Scenery and Cent Icon
 
 `arena-pixel-grounded.png` is the current map. It was created with the built-in image tool

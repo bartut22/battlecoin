@@ -56,9 +56,15 @@ With the dev server on port 5174, verify these changes using:
 npm test
 node scripts/verify-microstructure-arena.mjs
 node scripts/verify-ambience.mjs
+node scripts/verify-flag-bombs.mjs
 node scripts/verify-arena-load.mjs
 npm run build
 ```
+
+Flags ripple only in their fabric, leaving their poles and stone sockets stationary. The
+pixel bomb shares artwork with the tutorial, tracks its matched troop throughout the drop,
+and uses distinct local full-fill and partial-hit effects. Reduced motion disables cloth
+sway, fuse particles, and tumbling; no screen shake or full-screen flashes are used.
 
 ### 3. Backend
 

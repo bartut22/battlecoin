@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Pause, Play, RotateCcw } from 'lucide-react'
 import { loadCharacterArt } from './character-art.js'
+import { loadBombArt } from './bomb-art.js'
 import './tutorial-demo.css'
 
 const CAPTIONS = [
@@ -12,9 +13,9 @@ const CAPTIONS = [
 
 export default function TutorialDemo({ chapter = 0 }) {
   const canvas = useRef(null), elapsed = useRef(0)
-  const [art, setArt] = useState(null), [paused, setPaused] = useState(false), [phase, setPhase] = useState(0), [replay, setReplay] = useState(0)
+  const [art, setArt] = useState(null), [bombArt, setBombArt] = useState(null), [paused, setPaused] = useState(false), [phase, setPhase] = useState(0), [replay, setReplay] = useState(0)
   const [reduced, setReduced] = useState(() => matchMedia('(prefers-reduced-motion: reduce)').matches)
-  useEffect(() => { let alive = true; loadCharacterArt().then(value => { if (alive) setArt(value) }).catch(() => {}); return () => { alive = false } }, [])
+  useEffect(() => { let alive = true; Promise.all([loadCharacterArt(),loadBombArt()]).then(([characters,bomb]) => { if (alive) { setArt(characters); setBombArt(bomb) } }).catch(() => {}); return () => { alive = false } }, [])
   useEffect(() => {
     const query = matchMedia('(prefers-reduced-motion: reduce)'), update = () => setReduced(query.matches)
     query.addEventListener('change', update)
@@ -67,7 +68,7 @@ export default function TutorialDemo({ chapter = 0 }) {
           sprite('balloon-small', 'DOWN', balloonX, 81, 75)
           if (time > 6.7) {
             const fall = Math.min(1, (time - 6.7) / .9)
-            ctx.fillStyle = '#392d23'; ctx.fillRect(targetX - 4, 71 + 48 * fall * fall, 8, 8)
+            if (bombArt) ctx.drawImage(bombArt, targetX - 11, 53 + 48 * fall * fall, 26, 31)
           }
         }
         if (time >= 7.6 && !reduced) {
@@ -83,7 +84,7 @@ export default function TutorialDemo({ chapter = 0 }) {
     }
     frame = requestAnimationFrame(draw)
     return () => cancelAnimationFrame(frame)
-  }, [art, chapter, paused, reduced, replay])
+  }, [art, bombArt, chapter, paused, reduced, replay])
   return <section className="tutorial-demo" aria-label="Animated trading example">
     <header><strong>Training example</strong><div><button className="icon-button" aria-label={paused ? 'Play tutorial animation' : 'Pause tutorial animation'} disabled={reduced} onClick={() => setPaused(value => !value)}>{paused ? <Play size={16}/> : <Pause size={16}/>}</button><button className="icon-button" aria-label="Replay tutorial animation" disabled={reduced} onClick={() => { elapsed.current = 0; setPaused(false); setReplay(value => value + 1) }}><RotateCcw size={16}/></button></div></header>
     <canvas ref={canvas} width="560" height="180" role="img" aria-label={reduced ? 'A gold-outlined limit troop rests on the UP side; red troops represent opposing depth.' : 'Illustrated paper order placement, matching taker, and simulated fill.'}/>

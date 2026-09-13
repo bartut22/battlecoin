@@ -5,6 +5,9 @@ import { createLedger } from './simulation.js'
 import { loadCharacterArt, balloonSizeFor } from './character-art.js'
 import { loadArenaFlags } from './arena-flags.js'
 import { createAmbience } from './arena-ambience.js'
+import { createWindFlag } from './wind-flag.js'
+import { loadBombArt } from './bomb-art.js'
+import { createBombVisual, drawBombImpact } from './bomb-visuals.js'
 import { ARENA, FIELD_OUTLINE, TOWERS, bidRanks } from './frontline.js'
 import { tradeImpacts, troopLiquidity } from './trade-impact.js'
 export const CARDS = DEFAULT_CARD_VALUES
@@ -34,6 +37,8 @@ export async function createBattle(host,onChange,config={},recordTrade=()=>{}) {
   const characterTextures = Object.fromEntries(['UP','DOWN'].map(side=>[side,Object.fromEntries(Object.entries(art[side]).map(([kind,canvas])=>{
     const texture=Texture.from(canvas);texture.source.scaleMode='nearest';return [kind,texture]
   }))]))
+  let bombTexture
+  try {bombTexture=Texture.from(await loadBombArt());bombTexture.source.scaleMode='nearest'}catch(error){canvasResizeObserver.disconnect();app.destroy(true,{children:true});throw error}
   const shade=new Graphics(),lines=new Graphics(),field=new Container(),labels=new Container(),preview=new Graphics()
   field.sortableChildren=true
   const territory=new Container(),fieldMask=new Graphics().poly(FIELD_OUTLINE).fill('#fff')
@@ -46,11 +51,11 @@ export async function createBattle(host,onChange,config={},recordTrade=()=>{}) {
   }
   let flagArt
   try {flagArt=await loadArenaFlags()}catch(error){canvasResizeObserver.disconnect();app.destroy(true,{children:true});throw error}
+  const windFlags=[]
   for(const side of ['UP','DOWN'])for(const y of [300,640]){
     const art=flagArt[side],x=side==='UP'?125:1495
     const shadow=new Graphics().ellipse(x+6,y,18,5).fill({color:'#493b29',alpha:.3});app.stage.addChild(shadow)
-    const flag=new Sprite(Texture.from(art.canvas));flag.texture.source.scaleMode='nearest'
-    flag.anchor.set(art.anchorX,art.anchorY);flag.height=142;flag.scale.x=flag.scale.y;flag.position.set(x,y);app.stage.addChild(flag)
+    const flag=createWindFlag(art,side,y/180);flag.mesh.position.set(x,y);app.stage.addChild(flag.mesh);windFlags.push(flag)
   }
   let market=config.market||DEFAULT_MARKET,cards=config.cards||CARDS
   const ledger=createLedger(100), units=new Map(), retreating=[], flights=[], bombs=[], blasts=[], shatters=[], seenTrades=new Set(), labelCache=new Map()
@@ -215,19 +220,19 @@ export async function createBattle(host,onChange,config={},recordTrade=()=>{}) {
     return flight
   }
   function dropBomb(flight,hit){
-    const bomb=new Graphics().circle(0,0,12).fill('#252639').stroke({color:flight.own?'#ffe084':'#d1d6e1',width:3})
-      .moveTo(0,-12).quadraticCurveTo(8,-24,15,-17).stroke({color:'#f2cb8e',width:3})
-      .circle(15,-17,4).fill('#ff964f')
+    const visual=createBombVisual(bombTexture,flight.own),bomb=visual.root
+    const shadow=new Graphics();field.addChild(shadow)
     const startY=flight.sprite.y+6
     const startX=flight.sprite.x
     bomb.position.set(startX,startY);field.addChild(bomb)
-    bombs.push({id:++bombId,g:bomb,x:hit.unit.wrap.x,y:hit.unit.wrap.y-22,startX,startY,age:0,target:hit.unit,hits:[hit]})
+    bombs.push({id:++bombId,g:bomb,visual,shadow,x:hit.unit.wrap.x,y:hit.unit.wrap.y-22,startX,startY,age:0,target:hit.unit,hits:[hit]})
     app.canvas.dataset.bombsDropped=String(bombId)
   }
   function explode(bomb){
     if(bomb.target.wrap.destroyed)return
     const ring=new Graphics();ring.position.set(bomb.x,bomb.y);field.addChild(ring)
-    blasts.push({ring,age:0})
+    ring.zIndex=2002
+    blasts.push({ring,age:0,full:bomb.hits.some(hit=>hit.consumed)})
     for(const hit of bomb.hits){
       const unit=hit.unit
       if(unit.wrap.destroyed)continue
@@ -283,7 +288,7 @@ export async function createBattle(host,onChange,config={},recordTrade=()=>{}) {
     orderSide=next.orderSide||orderSide
     if(market.marketId!==marketId){
       for(const flight of flights)flight.sprite.destroy({children:true})
-      for(const bomb of bombs)bomb.g.destroy()
+      for(const bomb of bombs){bomb.g.destroy({children:true});bomb.shadow.destroy()}
       flights.length=0;bombs.length=0
       for(const order of [...ledger.open]){record('cancel',order.side,order.price,order.notional,previousSlug);ledger.cancel(order.id,'expired')}
       for(const unit of [...units.values()]){unit.impactAt=0;unit.pendingNotional=0;retreat(unit,false)}
@@ -346,6 +351,7 @@ export async function createBattle(host,onChange,config={},recordTrade=()=>{}) {
     renderFrames++
     const dt=Math.min(.05,ticker.deltaMS/1000);elapsed+=dt
     ambience.tick(elapsed,ambientActors,reduced)
+    for(const flag of windFlags)flag.tick(elapsed,reduced)
     drawnFair=reduced?targetFair:drawnFair+(targetFair-drawnFair)*(1-Math.exp(-dt*6))
     const boundary=LEFT+(RIGHT-LEFT)*drawnFair
     app.canvas.dataset.frontX=String(boundary)
@@ -401,17 +407,20 @@ export async function createBattle(host,onChange,config={},recordTrade=()=>{}) {
       if(flight.age>2.1){flight.sprite.destroy({children:true});flights.splice(i,1)}
     }
     for(let i=bombs.length-1;i>=0;i--){
-      const bomb=bombs[i];bomb.age+=dt;const t=Math.min(1,bomb.age/.55)
+      const bomb=bombs[i];bomb.age+=dt;const t=Math.min(1,bomb.age/.65)
+      if(bomb.target.wrap.destroyed){bomb.g.destroy({children:true});bomb.shadow.destroy();bombs.splice(i,1);continue}
       if(!bomb.target.wrap.destroyed){bomb.x=bomb.target.wrap.x;bomb.y=bomb.target.wrap.y-22}
       bomb.g.x=bomb.startX+(bomb.x-bomb.startX)*t
-      bomb.g.y=bomb.startY+(bomb.y-bomb.startY)*t*t;bomb.g.rotation=reduced?0:t*3
+      bomb.g.y=bomb.startY+(bomb.y-bomb.startY)*t*t
+      bomb.visual.update(t,reduced)
+      bomb.shadow.clear().ellipse(0,0,7+t*7,3+t*2).fill({color:'#453b30',alpha:.12+t*.17})
+      bomb.shadow.position.set(bomb.x,bomb.y+25);bomb.shadow.zIndex=bomb.y-50
       bomb.g.zIndex=2001
-      if(t===1){app.canvas.dataset.lastImpactError=String(Math.hypot(bomb.g.x-bomb.x,bomb.g.y-bomb.y));explode(bomb);bomb.g.destroy();bombs.splice(i,1)}
+      if(t===1){app.canvas.dataset.lastImpactError=String(Math.hypot(bomb.g.x-bomb.x,bomb.g.y-bomb.y));explode(bomb);bomb.g.destroy({children:true});bomb.shadow.destroy();bombs.splice(i,1)}
     }
     for(let i=blasts.length-1;i>=0;i--){
-      const blast=blasts[i];blast.age+=dt;const t=Math.min(1,blast.age/.6)
-      blast.ring.clear().circle(0,0,12+t*40).fill({color:'#ffbd56',alpha:(1-t)*.65}).stroke({color:'#fff4bc',width:5*(1-t)})
-      for(let spark=0;spark<7;spark++){const a=spark*Math.PI*2/7;blast.ring.circle(Math.cos(a)*t*65,Math.sin(a)*t*38,5*(1-t)).fill({color:'#ffdb78',alpha:1-t})}
+      const blast=blasts[i];blast.age+=dt;const t=Math.min(1,blast.age/.8)
+      drawBombImpact(blast.ring,t,blast.full,reduced)
       if(t===1){blast.ring.destroy();blasts.splice(i,1)}
     }
     for(let i=shatters.length-1;i>=0;i--){
