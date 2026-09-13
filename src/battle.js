@@ -1,34 +1,37 @@
 import { Application, Assets, Container, Graphics, Sprite, Text, Rectangle, Texture } from 'pixi.js'
-import { DEFAULT_CARD_VALUES, DEFAULT_MARKET, marketCoverage, orderbookRows } from './market-engine.js'
-import { depthUnits, createLedger } from './simulation.js'
+import { DEFAULT_CARD_VALUES, DEFAULT_MARKET, marketCoverage, notionalCharacters } from './market-engine.js'
+import { createLedger } from './simulation.js'
 import { loadCharacterArt } from './character-art.js'
 import { bidRanks, bidAtPoint, frontX } from './frontline.js'
 export const CARDS = DEFAULT_CARD_VALUES
-const W=1600,H=900,LEFT=245,RIGHT=1355,TOP=110,BOTTOM=790
+const W=1600,H=900,LEFT=280,RIGHT=1355,TOP=110,BOTTOM=790
 export async function createBattle(host,onChange,config={}) {
   const app=new Application()
   await app.init({width:W,height:H,antialias:true,resolution:Math.min(devicePixelRatio,2),autoDensity:true,background:'#345536'})
   host.appendChild(app.canvas)
   let assets
-  try {assets=await Promise.all(['/assets/arena-wide-bridge.png','/assets/golem_green.json','/assets/golem_red.json','/assets/green_balloon_shaded.png','/assets/red_balloon_shaded.png','/assets/tower_primary_green.png','/assets/tower_primary_red.png'].map(path=>Assets.load(path)))}
+  try {assets=await Promise.all(['/assets/arena-sand-left-trees.png','/assets/golem_green.json','/assets/golem_red.json','/assets/green_balloon_shaded.png','/assets/red_balloon_shaded.png','/assets/tower_primary_green.png','/assets/tower_primary_red.png'].map(path=>Assets.load(path)))}
   catch(error){app.destroy(true,{children:true});throw error}
   const background=new Sprite(assets[0]);background.width=H;background.height=W;background.rotation=Math.PI/2;background.x=W;app.stage.addChild(background)
   let art
   try { art = await loadCharacterArt() } catch (error) { app.destroy(true,{children:true});throw error }
-  const characterTextures = Object.fromEntries(['UP','DOWN'].map(side=>[side,Object.fromEntries(Object.entries(art[side]).map(([kind,canvas])=>[kind,Texture.from(canvas)]))]))
+  const characterTextures = Object.fromEntries(['UP','DOWN'].map(side=>[side,Object.fromEntries(Object.entries(art[side]).map(([kind,canvas])=>{
+    const texture=Texture.from(canvas);texture.source.scaleMode='nearest';return [kind,texture]
+  }))]))
   const shade=new Graphics(),lines=new Graphics(),field=new Container(),labels=new Container(),preview=new Graphics()
   field.sortableChildren=true
   app.stage.addChild(shade,lines,field,labels,preview)
-  for(const [index,x] of [[5,125],[6,1475]]){const s=new Sprite(assets[index]);s.anchor.set(.5);s.width=170;s.scale.y=s.scale.x;s.position.set(x,H/2);app.stage.addChild(s)}
+  for(const [index,x] of [[5,165],[6,1435]]){const s=new Sprite(assets[index]);s.anchor.set(.5);s.width=170;s.scale.y=s.scale.x;s.position.set(x,H/2);app.stage.addChild(s)}
   let market=config.market||DEFAULT_MARKET,cards=config.cards||CARDS
   const ledger=createLedger(100), units=new Map(), retreating=[], flights=[], bombs=[], blasts=[], seenTrades=new Set()
+  let fundedCapital=100
   let orderSide=config.orderSide||'UP', bombId=0
   let selected=-1,elapsed=0,lastUi=0,message='',messageUntil=0,drawnFair=.5,targetFair=.5,marketId=null,hover=null
   const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches
   const text=(value,size=16,color='#fff')=>new Text({text:value,style:{fontFamily:'Arial',fontSize:size,fontWeight:'600',fill:color,stroke:{color:'#182718',width:3}}})
   const hoverLabel=text('',20,'#fff5b3');hoverLabel.anchor.set(.5);hoverLabel.visible=false;app.stage.addChild(hoverLabel)
   function addUnit(key,side,x,y,own=false,kind='scout'){
-    const wrap=new Container(),texture=kind==='balloon'?assets[side==='UP'?3:4]:characterTextures[side][kind]
+    const wrap=new Container(),texture=characterTextures[side][kind]
     const sprite=new Sprite(texture);sprite.anchor.set(.5,1)
     const height=own?(kind==='balloon'?86:68):48
     sprite.height=height;sprite.scale.x=Math.abs(sprite.scale.y)
@@ -50,35 +53,35 @@ export async function createBattle(host,onChange,config={}) {
     if(scared){const alert=text('!',24,'#ffdc85');alert.anchor.set(.5);alert.y=-75;unit.wrap.addChild(alert)}
     retreating.push(unit)
   }
-  function priceX(side,price){return LEFT+(RIGHT-LEFT)*(side==='UP'?price:100-price)/100}
   function syncBook(){
     const wanted=new Set()
-    const existingRows=new Set(orderbookRows(market).map(row=>row.id))
+    const visibleRanks=['UP','DOWN'].flatMap(side=>bidRanks(market,side))
+    const existingRows=new Set(visibleRanks.map(row=>row.id))
     labels.removeChildren().forEach(c=>c.destroy())
     for(const side of ['UP','DOWN']){
       const ranks=bidRanks(market,side), direction=side==='UP'?-1:1
-      const kind=market.participantNotional?.['kind'+side]||'scout'
-      const value=market.participantNotional?.[side]||25
+      const values=market.participantNotional?.values||{scout:25,guard:100,anchor:250}
       ranks.forEach((row,depth)=>{
-        const chunks=depthUnits(row.notional,value,24)
+        const chunks=notionalCharacters(row.notional,values,24)
         chunks.forEach((chunk,index)=>{
           const key='book:'+row.id+':'+index;wanted.add(key)
           const column=Math.floor(index/12),slot=index%12
           const x=Math.max(LEFT+8,Math.min(RIGHT-8,row.x+direction*column*Math.min(23,row.gap*.28)))
           const y=TOP+125+slot*41
           let unit=units.get(key)
-          if(unit && unit.kind!==kind){unit.wrap.destroy({children:true});units.delete(key);unit=null}
-          unit=unit||addUnit(key,side,x,y,false,kind)
+          if(unit && unit.kind!==chunk.kind){unit.wrap.destroy({children:true});units.delete(key);unit=null}
+          unit=unit||addUnit(key,side,x,y,false,chunk.kind)
           unit.targetX=x;unit.targetY=y;unit.notional=chunk.notional;unit.bookPrice=row.price;unit.rowId=row.id
           unit.sprite.alpha=depth===0?1:.7
         })
-        const count=Math.ceil(row.notional/value-1e-9)
-        if(row.gap>35||depth===0){
-          const badge=text(row.price.toFixed(1)+'c',17,side==='UP'?'#baffcb':'#ffd1d4')
+        const count=chunks.length
+        const priceLabel=row.rangeLow!=null&&row.rangeLow!==row.rangeHigh?row.rangeLow.toFixed(0)+'-'+row.rangeHigh.toFixed(0)+'c':row.price.toFixed(1)+'c'
+        if(row.gap>60||depth===0){
+          const badge=text(priceLabel,17,side==='UP'?'#baffcb':'#ffd1d4')
           badge.anchor.set(.5);badge.position.set(row.x,TOP+68);labels.addChild(badge)
         }
         if(depth===0){
-          const label=text(side+' BID '+row.price.toFixed(1)+'c | $'+row.notional.toFixed(0)+' | '+count+(count>24?' units (24 groups)':' units'),18,side==='UP'?'#a4ffc0':'#ffc1c5')
+          const label=text(side+' BID '+priceLabel+' | $'+row.notional.toFixed(0)+' | '+count+(count===1?' troop':' troops'),18,side==='UP'?'#a4ffc0':'#ffc1c5')
           label.anchor.set(side==='UP'?0:1,.5);label.position.set(side==='UP'?LEFT+10:RIGHT-10,BOTTOM-22);labels.addChild(label)
         }
       })
@@ -113,12 +116,16 @@ export async function createBattle(host,onChange,config={}) {
     const targetPrice=targetSide===trade.side?trade.price*100:100-trade.price*100
     const candidates=[...units.values()].filter(u=>u.side===targetSide&&u.key.startsWith('book:'))
     const target=candidates.sort((a,b)=>Math.abs((a.bookPrice||0)-targetPrice)-Math.abs((b.bookPrice||0)-targetPrice))[0]
-    const sprite=new Container(),balloon=new Sprite(assets[trade.side==='UP'?3:4])
+    const sprite=new Container(),balloon=new Sprite(characterTextures[trade.side].balloon)
     balloon.anchor.set(.5,1);balloon.height=90;balloon.scale.x=balloon.scale.y
     if(own) for(const [x,y] of [[-3,0],[3,0],[0,-3],[0,3]]){
       const gold=new Sprite(balloon.texture);gold.anchor.copyFrom(balloon.anchor);gold.scale.copyFrom(balloon.scale);gold.tint=0xffdc69;gold.position.set(x,y);sprite.addChild(gold)
     }
-    sprite.addChild(balloon);field.addChild(sprite)
+    sprite.addChild(balloon)
+    const notional=Number(trade.notional)||(Number(trade.size)*Number(trade.price))
+    const sizeLabel=text((own?'MY TAKER ':'TAKER ')+(Number.isFinite(notional)?'$'+notional.toFixed(notional>=100?0:2):'--'),16,own?'#ffe48a':'#fff7dc')
+    sizeLabel.anchor.set(.5,1);sizeLabel.y=-94;sprite.addChild(sizeLabel)
+    field.addChild(sprite)
     flights.push({sprite,own,age:0,dropped:false,startX:trade.side==='UP'?150:1450,x:point?.x||target?.targetX||frontX(market),y:point?.y||target?.targetY||450,target})
   }
   function dropBomb(flight){
@@ -164,7 +171,7 @@ export async function createBattle(host,onChange,config={}) {
     publish()
   }
   function publish(){
-    onChange({selected,capital:ledger.available,time:market.endTime?Math.max(0,Math.ceil((Date.parse(market.endTime)-Date.now())/1000)):0,
+    onChange({selected,capital:ledger.available,fundedCapital,time:market.endTime?Math.max(0,Math.ceil((Date.parse(market.endTime)-Date.now())/1000)):0,
       message,ended:false,crowns:[0,0],openOrders:ledger.open.map(o=>({...o})),completedOrders:ledger.completed.slice(0,100),
       positions:ledger.positions.map(p=>({...p,status:p.marketId===marketId?'held':'awaiting settlement'})),
       unrealizedPnl:ledger.mark(market),realizedPnl:ledger.realized})
@@ -191,7 +198,7 @@ export async function createBattle(host,onChange,config={}) {
       }
       if(remaining>1e-6||card.notional>ledger.available){showMessage('Insufficient capital or ask liquidity');return}
       for(const fill of fills){const o=ledger.place(side,fill.price,fill.cost,marketId);if(o)ledger.fill(o.id,o.quantity,fill.price)}
-      tradeFlight({side,direction:'BUY',price:fills[0].price/100},true)
+      tradeFlight({side,direction:'BUY',price:fills[0].price/100,notional:card.notional},true,p)
       showMessage('Simulated taker filled at available asks')
     }else{
       const rounded=picked.price
@@ -223,7 +230,7 @@ export async function createBattle(host,onChange,config={}) {
       hoverLabel.visible=!!picked
       if(picked){
         preview.roundRect(picked.x-25,Math.round(hover.y/41)*41-45,50,50,8).fill({color:'#ffdf79',alpha:.35}).stroke({color:'#ffdf79',width:3})
-        hoverLabel.text=orderSide+' '+(cards[selected].kind==='balloon'?'TAKER':'BID '+picked.price.toFixed(1)+'c')+' | $'+cards[selected].notional
+        hoverLabel.text=cards[selected].name+'  |  '+orderSide+' '+(cards[selected].kind==='balloon'?'TAKER @ ASK':'BID @ '+picked.price.toFixed(1)+'c')+'  |  $'+cards[selected].notional
         hoverLabel.position.set(Math.max(LEFT+110,Math.min(RIGHT-110,picked.x)),Math.max(TOP+25,hover.y-90))
       }
     }else {preview.clear();hoverLabel.visible=false}
@@ -269,7 +276,7 @@ export async function createBattle(host,onChange,config={}) {
     if(elapsed-lastUi>.2){publish();lastUi=elapsed}
   })
   setMarket(config)
-  return {setMarket,select,cancelOrder,closePosition,depositCapital(amount=100){ledger.deposit(amount);showMessage('Added $'+amount+' simulated funds')},
+  return {setMarket,select,cancelOrder,closePosition,depositCapital(amount=100){ledger.deposit(amount);fundedCapital+=amount;showMessage('Added $'+amount+' simulated funds')},
     dragStart(index){selected=index;publish()},dragMove(x,y){hover=local(x,y)},dragEnd(x,y){deploy(local(x,y));selected=-1;hover=null;preview.clear();publish()},dragCancel(){selected=-1;hover=null;preview.clear();publish()},
     destroy(){app.destroy(true,{children:true})}}
 }

@@ -1,7 +1,12 @@
 export const TROOP_KINDS = [
-  { kind: 'scout', name: 'Ranger', value: 25 },
-  { kind: 'guard', name: 'Guardian', value: 100 },
-  { kind: 'anchor', name: 'Crystal Golem', value: 500 },
+  { kind: 'scout', name: 'Dune Ranger', value: 25 },
+  { kind: 'guard', name: 'Sand Guard', value: 100 },
+  { kind: 'anchor', name: 'Rune Golem', value: 250 },
+]
+export const CARD_KINDS = [
+  TROOP_KINDS[0], TROOP_KINDS[1],
+  { kind: 'balloon', name: 'Sand Bomber', value: 20 },
+  TROOP_KINDS[2],
 ]
 let pending
 export function loadCharacterArt() {
@@ -10,11 +15,15 @@ export function loadCharacterArt() {
     const image = new Image()
     image.onload = () => {
       const frames = { UP: {}, DOWN: {} }
-      for (const [row, side] of ['UP', 'DOWN'].entries()) for (const [column, troop] of TROOP_KINDS.entries()) {
+      for (const [row, side] of ['UP', 'DOWN'].entries()) for (const [column, troop] of CARD_KINDS.entries()) {
         const canvas = document.createElement('canvas')
         canvas.width = 256; canvas.height = 256
         const ctx = canvas.getContext('2d', { willReadFrequently: true })
-        ctx.drawImage(image, column * image.width / 3, row * image.height / 2, image.width / 3, image.height / 2, 0, 0, 256, 256)
+        ctx.imageSmoothingEnabled = false
+        const cellWidth = image.width / 4, cellHeight = image.height / 2
+        const scale = Math.min(256 / cellWidth, 256 / cellHeight)
+        const width = cellWidth * scale, height = cellHeight * scale
+        ctx.drawImage(image, column * cellWidth, row * cellHeight, cellWidth, cellHeight, (256 - width) / 2, (256 - height) / 2, width, height)
         // The generated atlas uses a chroma backdrop; remove it once during sprite loading.
         const pixels = ctx.getImageData(0, 0, 256, 256)
         for (let i = 0; i < pixels.data.length; i += 4) {
@@ -27,7 +36,7 @@ export function loadCharacterArt() {
       resolve(frames)
     }
     image.onerror = () => { pending = null; reject(new Error('Unable to load troop artwork')) }
-    image.src = '/assets/troop-roster-keyed.png'
+    image.src = '/assets/sand-troops-pixel.png'
   })
   return pending
 }

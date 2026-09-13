@@ -59,3 +59,17 @@ test('market candidates and validation roll on exact epoch boundaries', () => {
   assert.equal(normalizeGammaMarket({ ...raw, slug: oldFive.slug }, oldFive, after), null)
   assert.equal(normalizeGammaMarket(raw, newFive, newFive.endMs), null)
 })
+
+test('Gamma event responses select the matching market and preserve a published target', () => {
+  const now = Date.parse('2026-09-13T00:00:01.000Z')
+  const candidate = candidateSlugs(now)[0]
+  const market = {
+    id: '123', conditionId: '0xmarket', slug: candidate.slug, question: 'Bitcoin Up or Down',
+    eventStartTime: new Date(candidate.startMs).toISOString(), active: true, closed: false,
+    acceptingOrders: true, enableOrderBook: true, outcomes: '["Up", "Down"]',
+    clobTokenIds: '["up-token", "down-token"]',
+  }
+  const normalized = normalizeGammaMarket({ slug: candidate.slug, eventMetadata: { priceToBeat: 77214.61 }, markets: [market] }, candidate, now)
+  assert.equal(normalized.priceToBeat, 77214.61)
+  assert.deepEqual(normalized.assets, { UP: 'up-token', DOWN: 'down-token' })
+})

@@ -1,6 +1,7 @@
 const GAMMA_BASE = '/gamma'
 const CLOB_BASE = '/clob'
 const MARKET_SOCKET_URL = 'wss://ws-subscriptions-clob.polymarket.com/ws/market'
+const RTDS_SOCKET_URL = 'wss://ws-live-data.polymarket.com'
 
 const DISCOVERY_INTERVAL_MS = 10_000
 const ROLLOVER_DISCOVERY_MS = 1_000
@@ -85,14 +86,16 @@ export function candidateSlugs(nowMs = Date.now()) {
 }
 
 export function normalizeGammaMarket(raw, candidate, nowMs = Date.now()) {
-  if (!raw || raw.slug !== candidate.slug || nowMs < candidate.startMs || nowMs >= candidate.endMs) return null
-  if (raw.active !== true || raw.closed === true || raw.acceptingOrders === false || raw.enableOrderBook === false) return null
+  const event = Array.isArray(raw?.markets) ? raw : null
+  const market = event?.markets.find(entry => entry.slug === candidate.slug) || raw
+  if (!market || market.slug !== candidate.slug || nowMs < candidate.startMs || nowMs >= candidate.endMs) return null
+  if (market.active !== true || market.closed === true || market.acceptingOrders === false || market.enableOrderBook === false) return null
 
-  const eventStart = Date.parse(raw.eventStartTime)
+  const eventStart = Date.parse(market.eventStartTime)
   if (Number.isFinite(eventStart) && Math.abs(eventStart - candidate.startMs) > 2_000) return null
 
-  const outcomes = parseArray(raw.outcomes)
-  const tokenIds = parseArray(raw.clobTokenIds)
+  const outcomes = parseArray(market.outcomes)
+  const tokenIds = parseArray(market.clobTokenIds)
   if (!outcomes || !tokenIds || outcomes.length !== tokenIds.length) return null
 
   const assets = {}
@@ -103,15 +106,20 @@ export function normalizeGammaMarket(raw, candidate, nowMs = Date.now()) {
   }
   if (!assets.UP || !assets.DOWN) return null
 
-  const marketId = String(raw.conditionId || raw.id || '').trim()
+  const marketId = String(market.conditionId || market.id || '').trim()
   if (!marketId) return null
+  const configuredTarget = finitePositive(
+    event?.eventMetadata?.priceToBeat ?? event?.priceToBeat ??
+    market.eventMetadata?.priceToBeat ?? market.priceToBeat,
+  )
   return {
     marketId,
-    title: String(raw.question || raw.title || raw.slug),
-    slug: raw.slug,
+    title: String(market.question || event?.title || market.title || market.slug),
+    slug: market.slug,
     startMs: candidate.startMs,
     endMs: candidate.endMs,
     endTime: new Date(candidate.endMs).toISOString(),
+    priceToBeat: configuredTarget,
     assets,
   }
 }
@@ -147,6 +155,9 @@ function makeInitialMarket(nowMs) {
     askUp: null,
     bidDown: null,
     askDown: null,
+    priceToBeat: null,
+    currentBtc: null,
+    referenceApproximate: false,
     book: emptyBook(),
     trade: null,
     trades: [],
@@ -167,7 +178,9 @@ export function createPolymarketFeed(options = {}) {
   const cancelInterval = options.clearInterval || globalThis.clearInterval.bind(globalThis)
   const gammaBase = options.gammaBase || GAMMA_BASE
   const clobBase = options.clobBase || CLOB_BASE
+  const polyBase = options.polyBase || '/poly'
   const socketUrl = options.socketUrl || MARKET_SOCKET_URL
+  const rtdsSocketUrl = options.rtdsSocketUrl || RTDS_SOCKET_URL
 
   let running = false
   let subscribers = 0
@@ -190,6 +203,7 @@ export function createPolymarketFeed(options = {}) {
   let socket = null
   let discoveryAbort = null
   let booksAbort = null
+  let referenceAbort = null
   let discoveryTimer = null
   let expiryTimer = null
   let reconnectTimer = null
@@ -198,6 +212,12 @@ export function createPolymarketFeed(options = {}) {
   let heartbeatTimer = null
   let lastPublishAt = 0
   let reconnectAttempt = 0
+  let oracleSocket = null
+  let oracleReconnectTimer = null
+  let currentBtc = null
+  let priceToBeat = null
+  let referenceApproximate = false
+  const openingReferences = new Map()
   const listeners = new Set()
 
   const clearTimer = (name) => {
@@ -236,6 +256,9 @@ export function createPolymarketFeed(options = {}) {
       askUp: cents(up.asks[0]?.price),
       bidDown: cents(down.bids[0]?.price),
       askDown: cents(down.asks[0]?.price),
+      priceToBeat,
+      currentBtc,
+      referenceApproximate,
       book: {
         UP: { bids: [...up.bids], asks: [...up.asks] },
         DOWN: { bids: [...down.bids], asks: [...down.asks] },
@@ -264,6 +287,63 @@ export function createPolymarketFeed(options = {}) {
     message = nextMessage
     touch()
     publish()
+  }
+
+  const acceptOraclePrice = (value, at = now()) => {
+    const price = finitePositive(value)
+    if (price === null) return
+    currentBtc = price
+    for (const interval of INTERVALS) {
+      const intervalMs = interval.seconds * 1_000
+      const startMs = Math.floor(at / intervalMs) * intervalMs
+      if (at - startMs <= 5_000 && !openingReferences.has(startMs)) openingReferences.set(startMs, price)
+    }
+    if (info && priceToBeat === null) {
+      priceToBeat = openingReferences.get(info.startMs) || price
+      referenceApproximate = !openingReferences.has(info.startMs)
+    }
+    touch(at)
+    publish()
+  }
+
+  const closeOracle = () => {
+    if (oracleReconnectTimer !== null) cancelTimeout(oracleReconnectTimer)
+    oracleReconnectTimer = null
+    const current = oracleSocket
+    oracleSocket = null
+    if (!current) return
+    current.onopen = null; current.onmessage = null; current.onerror = null; current.onclose = null
+    try { current.close() } catch { /* already closed */ }
+  }
+
+  const connectOracle = () => {
+    if (!running || !WebSocketImpl || oracleSocket) return
+    const candidate = new WebSocketImpl(rtdsSocketUrl)
+    oracleSocket = candidate
+    candidate.onopen = () => {
+      if (oracleSocket !== candidate) return
+      candidate.send(JSON.stringify({ action: 'subscribe', subscriptions: [{ topic: 'crypto_prices_twap_sixty', type: 'update', filters: JSON.stringify({ symbol: 'btc/usd' }) }] }))
+    }
+    candidate.onmessage = event => {
+      if (oracleSocket !== candidate) return
+      let messages
+      try { const parsed = JSON.parse(event.data); messages = Array.isArray(parsed) ? parsed : [parsed] } catch { return }
+      for (const entry of messages) {
+        const payload = entry?.payload || entry?.data || entry
+        const symbol = String(payload?.symbol || '').toLowerCase()
+        if (symbol && symbol !== 'btc/usd') continue
+        const rawValue = payload?.value ?? payload?.price ?? payload?.full_accuracy_value
+        const numeric = Number(rawValue)
+        const value = numeric > 1e12 ? numeric / 1e18 : numeric
+        acceptOraclePrice(value, timestampMs(payload?.timestamp ?? entry?.timestamp, now()))
+      }
+    }
+    candidate.onerror = () => { if (oracleSocket === candidate) candidate.close() }
+    candidate.onclose = () => {
+      if (oracleSocket !== candidate) return
+      oracleSocket = null
+      if (running) oracleReconnectTimer = scheduleTimeout(connectOracle, 2_000)
+    }
   }
 
   const closeSocket = () => {
@@ -481,6 +561,40 @@ export function createPolymarketFeed(options = {}) {
     }, Math.max(0, info.endMs - now() + 25))
   }
 
+  const fetchOpeningReference = async nextInfo => {
+    referenceAbort?.abort()
+    const controller = new AbortController()
+    referenceAbort = controller
+    const variant = nextInfo.endMs - nextInfo.startMs <= 300_000 ? 'fiveminute' : 'fifteenminute'
+    const query = new URLSearchParams({
+      symbol: 'BTC',
+      eventStartTime: new Date(nextInfo.startMs).toISOString(),
+      variant,
+      endDate: new Date(nextInfo.endMs).toISOString(),
+      twap: 'true',
+      twapLookbackSeconds: '60',
+    })
+    try {
+      const response = await fetchImpl(`${polyBase}/api/crypto/crypto-price?${query}`, {
+        signal: AbortSignal.any([controller.signal, AbortSignal.timeout(12000)]), cache: 'no-store',
+      })
+      if (!response.ok) return
+      const payload = await response.json()
+      const opening = finitePositive(payload?.openPrice)
+      if (opening !== null && info?.marketId === nextInfo.marketId) {
+        priceToBeat = opening
+        openingReferences.set(nextInfo.startMs, opening)
+        referenceApproximate = false
+        touch(Number(payload.timestamp) || now())
+        publish()
+      }
+    } catch (error) {
+      if (error?.name !== 'AbortError') publish()
+    } finally {
+      if (referenceAbort === controller) referenceAbort = null
+    }
+  }
+
   const installMarket = (nextInfo) => {
     if (info?.marketId === nextInfo.marketId) {
       scheduleExpiry()
@@ -489,6 +603,8 @@ export function createPolymarketFeed(options = {}) {
     }
     closeSocket()
     info = nextInfo
+    priceToBeat = nextInfo.priceToBeat || openingReferences.get(nextInfo.startMs) || null
+    referenceApproximate = false
     book = emptyBook()
     trade = null
     lastTradeUp = null
@@ -498,18 +614,25 @@ export function createPolymarketFeed(options = {}) {
     bufferedDeltas = { UP: [], DOWN: [] }
     reconnectAttempt = 0
     setStatus('connecting', 'Loading the live Polymarket order book')
+    fetchOpeningReference(nextInfo)
     scheduleExpiry()
     connect()
   }
 
   const fetchCandidate = async (candidate, signal) => {
     try {
-      const response = await fetchImpl(`${gammaBase}/markets/slug/${encodeURIComponent(candidate.slug)}`, {
+      let response = await fetchImpl(`${gammaBase}/events/slug/${encodeURIComponent(candidate.slug)}`, {
         signal: AbortSignal.any([signal, AbortSignal.timeout(12000)]),
         cache: 'no-store',
       })
-      if (!response.ok) return null
-      return normalizeGammaMarket(await response.json(), candidate, now())
+      if (response.ok) {
+        const eventMarket = normalizeGammaMarket(await response.json(), candidate, now())
+        if (eventMarket) return eventMarket
+      }
+      response = await fetchImpl(`${gammaBase}/markets/slug/${encodeURIComponent(candidate.slug)}`, {
+        signal: AbortSignal.any([signal, AbortSignal.timeout(12000)]), cache: 'no-store',
+      })
+      return response.ok ? normalizeGammaMarket(await response.json(), candidate, now()) : null
     } catch (error) {
       if (error?.name === 'AbortError') throw error
       return null
@@ -561,10 +684,13 @@ export function createPolymarketFeed(options = {}) {
     generation += 1
     discoveryAbort?.abort()
     discoveryAbort = null
+    referenceAbort?.abort()
+    referenceAbort = null
     clearTimer('discoveryTimer')
     clearTimer('expiryTimer')
     clearTimer('publishTimer')
     closeSocket()
+    closeOracle()
   }
 
   const start = () => {
@@ -572,6 +698,7 @@ export function createPolymarketFeed(options = {}) {
     running = true
     generation += 1
     setStatus(info ? 'stale' : 'connecting', info ? 'Refreshing Polymarket' : 'Finding the current BTC market')
+    connectOracle()
     discover()
   }
 
