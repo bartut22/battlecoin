@@ -4,7 +4,7 @@ import './sidebar.css'
 
 const short = (pubkey) => pubkey ? `${pubkey.slice(0, 4)}…${pubkey.slice(-4)}` : ''
 
-export default function Sidebar({ open, onOpen, onClose, user, wallet, onLogout }) {
+export default function Sidebar({ open, onOpen, onClose, user, wallet, onLogout, capitalControls }) {
   const [sound, setSound] = useState(true)
   const [balance, setBalance] = useState(null)
   const [mode, setMode] = useState('deposit')
@@ -87,6 +87,11 @@ export default function Sidebar({ open, onOpen, onClose, user, wallet, onLogout 
           <button className="sidebar-connect" disabled>Connect wallet</button>
         </div>}
       </section>
+
+      {capitalControls && <section className="sidebar-section sidebar-capital" aria-label="Refill demo capital">
+        <h2>Refill demo capital</h2>
+        {capitalControls}
+      </section>}
 
       <section className="sidebar-section">
         <h2>Settings</h2>

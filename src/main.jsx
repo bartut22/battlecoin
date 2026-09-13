@@ -1,27 +1,31 @@
 import { useState } from 'react'
+import '@fontsource/vt323/latin-400.css'
+import '@fontsource/pixelify-sans/latin-400.css'
+import '@fontsource/pixelify-sans/latin-600.css'
+import '@fontsource/pixelify-sans/latin-700.css'
 import { createRoot } from 'react-dom/client'
 import App from './App.jsx'
 import LoginScreen from './LoginScreen.jsx'
-import { getSession, getUser, logout } from './auth.js'
+import { getSession, logout } from './auth.js'
 import { airdrop } from './solana.js'
 import './style.css'
+import './arena-theme.css'
+import './pixel-ui.css'
+import './pixel-skin.css'
 
 function initialUser() {
-  const username = getSession()
-  if (!username) return null
-  const record = getUser(username)
-  return { username, wallet: record?.wallet ?? null }
+  return getSession()
 }
 
 function Root() {
   const [user, setUser] = useState(initialUser)
   const onLogout = () => { logout(); setUser(null) }
   const onAuth = (result) => {
-    setUser({ username: result.username, wallet: result.wallet })
+    setUser({ username: result.username, userId: result.userId, wallet: result.wallet })
     if (result.isNew && result.wallet) airdrop(result.wallet).catch(() => {})
   }
   return user
-    ? <App user={user.username} wallet={user.wallet} onLogout={onLogout} />
+    ? <App user={user.username} userId={user.userId} wallet={user.wallet} onLogout={onLogout} />
     : <LoginScreen onAuth={onAuth} />
 }
 
