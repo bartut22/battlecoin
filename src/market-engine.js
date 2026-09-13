@@ -33,7 +33,7 @@ export function orderbookRows(market) {
   const fair = marketCoverage(market).upCents
   return ['UP', 'DOWN'].flatMap(side => ['bid', 'ask'].flatMap(type =>
     [...(market.book?.[side]?.[type + 's'] || [])]
-      .filter(level => Number(level.price) > 0 && Number(level.price) <= 1 && Number(level.size) > 0)
+      .filter(level => level.price !== null && level.price !== '' && Number(level.price) >= 0 && Number(level.price) <= 1 && Number(level.size) > 0)
       .sort((a, b) => type === 'bid' ? b.price - a.price : a.price - b.price)
       .map((level, index) => {
         const price = Number(level.price) * 100, quantity = Number(level.size)

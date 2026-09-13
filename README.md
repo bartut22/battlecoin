@@ -35,7 +35,9 @@ npm run dev
 
 Runs on `http://localhost:5173`. `vite.config.js` proxies `/gamma` and `/clob` to Polymarket
 (avoiding CORS for public market data), `/poly` to `polymarket.com` (for the BTC opening-price
-reference lookup), and `/api` to the local backend.
+reference lookup), and `/api` to the local backend. Pixel fonts are self-hosted via
+`@fontsource` (no external font request at runtime): `Pixelify Sans` for the dashboard and
+arena labels, `Press Start 2P` for the login screen.
 
 ### 3. Backend
 
@@ -81,7 +83,11 @@ devnet instead (needed for a build judges/other machines will actually hit).
   - The other three cards place resting limit orders at the dropped price rank; they fill when
     a matching public trade crosses that price, or expire uncancelled when the round rolls over.
 - Troops on the field represent aggregated order-book depth, not individual traders — card
-  denominations (Settings tab) control how a given notional is broken into troops.
+  denominations (Settings tab) control how a given notional is broken into troops. A hit that
+  fully consumes a troop's depth triggers a pixel-shatter effect (`trade-impact.js` matches
+  incoming trades to the units they consume); a partial hit just tints the unit.
+- Prices display the complete 0-100c range — 100c buys and 0c exits are supported. A dismissible
+  banner announces each new market as it opens.
 - Open orders, held positions, and trade **history** live in the portfolio panel below the
   arena. History is read from the database (`GET /trades`), so it survives page reloads;
   open orders/positions are current in-memory state (nothing rests across a reload).
@@ -97,7 +103,12 @@ npm test
 
 Runs the Node test-runner suite in `scripts/*.test.mjs` — probability/coverage math, order
 book grouping and depth-to-troop conversion, ledger accounting (fills, cancels, closes),
-Polymarket feed normalization and market rollover, and arena placement geometry.
+Polymarket feed normalization and market rollover, zero/100c price edge cases, and arena
+placement geometry.
+
+`node scripts/verify-arena-updates.mjs` is a separate Playwright-based smoke check against a
+running dev server — bid placement, partial/full hits, market rollover, and pixel typography
+rendering at desktop/tablet/mobile widths.
 
 ## Known limitations
 
@@ -117,6 +128,7 @@ This is a hackathon prototype, not a production trading system:
 api/            FastAPI backend — auth, trade recording/history, Tiger Data access
 db/schema.sql   TimescaleDB schema (drop-and-recreate, no migrations tool)
 src/            React app — LoginScreen, Sidebar, App (exchange UI), battle.js (PixiJS arena),
+                trade-impact.js (matches trades to hit units for shatter/tint effects),
                 auth.js/solana.js (backend + wallet clients), polymarket-feed.js/usePolymarket.js
                 (live market data), market-engine.js/frontline.js (pricing and layout math)
 scripts/        Node test suite (*.test.mjs) plus asset-generation and Playwright smoke scripts

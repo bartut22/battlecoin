@@ -1,5 +1,8 @@
 import { groupedOrderbookRows, marketCoverage } from './market-engine.js'
-export const ARENA = { width: 1600, height: 900, left: 280, right: 1355, top: 110, bottom: 790 }
+export const ARENA = { width: 1600, height: 900, left: 312, right: 1335, top: 78, bottom: 822 }
+// Interior of the rotated map, including the bridge but excluding river and masonry.
+export const FIELD_OUTLINE = [312,78,765,78,765,181,909,181,909,78,1335,78,1335,822,909,822,909,720,765,720,765,822,312,822]
+export const TOWERS = [{ side: 'UP', x: 165, y: 432 }, { side: 'DOWN', x: 1450, y: 432 }]
 export function frontX(market) {
   return ARENA.left + (ARENA.right - ARENA.left) * marketCoverage(market).upCoverage
 }

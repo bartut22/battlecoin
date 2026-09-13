@@ -1,4 +1,8 @@
 import { useState } from 'react'
+import '@fontsource/vt323/latin-400.css'
+import '@fontsource/pixelify-sans/latin-400.css'
+import '@fontsource/pixelify-sans/latin-600.css'
+import '@fontsource/pixelify-sans/latin-700.css'
 import { createRoot } from 'react-dom/client'
 import App from './App.jsx'
 import LoginScreen from './LoginScreen.jsx'
@@ -6,6 +10,8 @@ import { getSession, logout } from './auth.js'
 import { airdrop } from './solana.js'
 import './style.css'
 import './arena-theme.css'
+import './pixel-ui.css'
+import './pixel-skin.css'
 
 function initialUser() {
   return getSession()
