@@ -1,7 +1,7 @@
 export const TROOP_KINDS = [
   { kind: 'scout', name: 'Dune Ranger', value: 25 },
   { kind: 'guard', name: 'Sand Guard', value: 100 },
-  { kind: 'anchor', name: 'Rune Golem', value: 500 },
+  { kind: 'anchor', name: 'Rune Golem', value: 250 },
 ]
 export const CARD_KINDS = [
   TROOP_KINDS[0], TROOP_KINDS[1],

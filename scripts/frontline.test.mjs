@@ -26,3 +26,10 @@ test('thin territories keep bid ranks inside the walls',()=>{
   }
  }
 })
+test('arena price-band settings group ranks nearest fair value',()=>{
+ const grouped={...market,participantNotional:{priceBand:2}}
+ const ranks=bidRanks(grouped,'UP')
+ assert.equal(ranks.length,2)
+ assert.equal(ranks[0].rangeHigh,34);assert.equal(ranks[0].rangeLow,33)
+ assert.equal(ranks[0].notional,340+165)
+})

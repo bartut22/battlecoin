@@ -45,6 +45,47 @@ export function orderbookRows(market) {
       })
   ))
 }
+export function groupedOrderbookRows(market, side, type = 'bid', bandCents = 1) {
+  const rows = orderbookRows(market).filter(row => row.side === side && row.type === type)
+  const band = clamp(Math.round(numberValue(bandCents, 1)), 1, 10)
+  if (band === 1) return rows
+  const groups = []
+  for (let index = 0; index < rows.length; index += band) {
+    const members = rows.slice(index, index + band)
+    const first = members[0], last = members.at(-1)
+    groups.push({
+      ...first,
+      id: `${first.side}-${first.type}-band-${band}-${index / band}`,
+      quantity: members.reduce((sum, row) => sum + row.quantity, 0),
+      notional: members.reduce((sum, row) => sum + row.notional, 0),
+      rangeLow: Math.min(first.price, last.price),
+      rangeHigh: Math.max(first.price, last.price),
+      bandCents: band,
+      members,
+    })
+  }
+  return groups
+}
+export function notionalCharacters(notional, values = { scout: 25, guard: 100, anchor: 250 }, cap = 24) {
+  let remaining = Math.max(0, numberValue(notional))
+  const denominations = Object.entries(values)
+    .map(([kind, value]) => ({ kind, value: Math.max(1, numberValue(value, 1)) }))
+    .sort((a, b) => b.value - a.value)
+  const smallest = denominations.at(-1) || { kind: 'scout', value: 1 }
+  const chunks = []
+  while (remaining > 1e-8 && chunks.length < cap) {
+    if (chunks.length === cap - 1) {
+      const finalKind = denominations.find(item => item.value <= remaining)?.kind || smallest.kind
+      chunks.push({ kind: finalKind, notional: remaining })
+      break
+    }
+    const denomination = denominations.find(item => item.value <= remaining) || smallest
+    const amount = Math.min(remaining, denomination.value)
+    chunks.push({ kind: denomination.kind, notional: amount })
+    remaining -= amount
+  }
+  return chunks
+}
 export function editableCard(cards, index, value) {
   return cards.map((card, i) => i === index ? { ...card, notional: clamp(numberValue(value, card.notional), 1, 100000) } : card)
 }

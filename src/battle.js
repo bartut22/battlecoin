@@ -1,10 +1,10 @@
 import { Application, Assets, Container, Graphics, Sprite, Text, Rectangle, Texture } from 'pixi.js'
-import { DEFAULT_CARD_VALUES, DEFAULT_MARKET, marketCoverage, orderbookRows } from './market-engine.js'
-import { depthUnits, createLedger } from './simulation.js'
+import { DEFAULT_CARD_VALUES, DEFAULT_MARKET, marketCoverage, notionalCharacters } from './market-engine.js'
+import { createLedger } from './simulation.js'
 import { loadCharacterArt } from './character-art.js'
 import { bidRanks, bidAtPoint, frontX } from './frontline.js'
 export const CARDS = DEFAULT_CARD_VALUES
-const W=1600,H=900,LEFT=245,RIGHT=1355,TOP=110,BOTTOM=790
+const W=1600,H=900,LEFT=280,RIGHT=1355,TOP=110,BOTTOM=790
 export async function createBattle(host,onChange,config={}) {
   const app=new Application()
   await app.init({width:W,height:H,antialias:true,resolution:Math.min(devicePixelRatio,2),autoDensity:true,background:'#345536'})
@@ -21,9 +21,10 @@ export async function createBattle(host,onChange,config={}) {
   const shade=new Graphics(),lines=new Graphics(),field=new Container(),labels=new Container(),preview=new Graphics()
   field.sortableChildren=true
   app.stage.addChild(shade,lines,field,labels,preview)
-  for(const [index,x] of [[5,125],[6,1475]]){const s=new Sprite(assets[index]);s.anchor.set(.5);s.width=170;s.scale.y=s.scale.x;s.position.set(x,H/2);app.stage.addChild(s)}
+  for(const [index,x] of [[5,165],[6,1435]]){const s=new Sprite(assets[index]);s.anchor.set(.5);s.width=170;s.scale.y=s.scale.x;s.position.set(x,H/2);app.stage.addChild(s)}
   let market=config.market||DEFAULT_MARKET,cards=config.cards||CARDS
   const ledger=createLedger(100), units=new Map(), retreating=[], flights=[], bombs=[], blasts=[], seenTrades=new Set()
+  let fundedCapital=100
   let orderSide=config.orderSide||'UP', bombId=0
   let selected=-1,elapsed=0,lastUi=0,message='',messageUntil=0,drawnFair=.5,targetFair=.5,marketId=null,hover=null
   const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -52,35 +53,35 @@ export async function createBattle(host,onChange,config={}) {
     if(scared){const alert=text('!',24,'#ffdc85');alert.anchor.set(.5);alert.y=-75;unit.wrap.addChild(alert)}
     retreating.push(unit)
   }
-  function priceX(side,price){return LEFT+(RIGHT-LEFT)*(side==='UP'?price:100-price)/100}
   function syncBook(){
     const wanted=new Set()
-    const existingRows=new Set(orderbookRows(market).map(row=>row.id))
+    const visibleRanks=['UP','DOWN'].flatMap(side=>bidRanks(market,side))
+    const existingRows=new Set(visibleRanks.map(row=>row.id))
     labels.removeChildren().forEach(c=>c.destroy())
     for(const side of ['UP','DOWN']){
       const ranks=bidRanks(market,side), direction=side==='UP'?-1:1
-      const kind=market.participantNotional?.['kind'+side]||'scout'
-      const value=market.participantNotional?.[side]||25
+      const values=market.participantNotional?.values||{scout:25,guard:100,anchor:250}
       ranks.forEach((row,depth)=>{
-        const chunks=depthUnits(row.notional,value,24)
+        const chunks=notionalCharacters(row.notional,values,24)
         chunks.forEach((chunk,index)=>{
           const key='book:'+row.id+':'+index;wanted.add(key)
           const column=Math.floor(index/12),slot=index%12
           const x=Math.max(LEFT+8,Math.min(RIGHT-8,row.x+direction*column*Math.min(23,row.gap*.28)))
           const y=TOP+125+slot*41
           let unit=units.get(key)
-          if(unit && unit.kind!==kind){unit.wrap.destroy({children:true});units.delete(key);unit=null}
-          unit=unit||addUnit(key,side,x,y,false,kind)
+          if(unit && unit.kind!==chunk.kind){unit.wrap.destroy({children:true});units.delete(key);unit=null}
+          unit=unit||addUnit(key,side,x,y,false,chunk.kind)
           unit.targetX=x;unit.targetY=y;unit.notional=chunk.notional;unit.bookPrice=row.price;unit.rowId=row.id
           unit.sprite.alpha=depth===0?1:.7
         })
-        const count=Math.ceil(row.notional/value-1e-9)
-        if(row.gap>35||depth===0){
-          const badge=text(row.price.toFixed(1)+'c',17,side==='UP'?'#baffcb':'#ffd1d4')
+        const count=chunks.length
+        const priceLabel=row.rangeLow!=null&&row.rangeLow!==row.rangeHigh?row.rangeLow.toFixed(0)+'-'+row.rangeHigh.toFixed(0)+'c':row.price.toFixed(1)+'c'
+        if(row.gap>60||depth===0){
+          const badge=text(priceLabel,17,side==='UP'?'#baffcb':'#ffd1d4')
           badge.anchor.set(.5);badge.position.set(row.x,TOP+68);labels.addChild(badge)
         }
         if(depth===0){
-          const label=text(side+' BID '+row.price.toFixed(1)+'c | $'+row.notional.toFixed(0)+' | '+count+(count>24?' units (24 groups)':' units'),18,side==='UP'?'#a4ffc0':'#ffc1c5')
+          const label=text(side+' BID '+priceLabel+' | $'+row.notional.toFixed(0)+' | '+count+(count===1?' troop':' troops'),18,side==='UP'?'#a4ffc0':'#ffc1c5')
           label.anchor.set(side==='UP'?0:1,.5);label.position.set(side==='UP'?LEFT+10:RIGHT-10,BOTTOM-22);labels.addChild(label)
         }
       })
@@ -170,7 +171,7 @@ export async function createBattle(host,onChange,config={}) {
     publish()
   }
   function publish(){
-    onChange({selected,capital:ledger.available,time:market.endTime?Math.max(0,Math.ceil((Date.parse(market.endTime)-Date.now())/1000)):0,
+    onChange({selected,capital:ledger.available,fundedCapital,time:market.endTime?Math.max(0,Math.ceil((Date.parse(market.endTime)-Date.now())/1000)):0,
       message,ended:false,crowns:[0,0],openOrders:ledger.open.map(o=>({...o})),completedOrders:ledger.completed.slice(0,100),
       positions:ledger.positions.map(p=>({...p,status:p.marketId===marketId?'held':'awaiting settlement'})),
       unrealizedPnl:ledger.mark(market),realizedPnl:ledger.realized})
@@ -275,7 +276,7 @@ export async function createBattle(host,onChange,config={}) {
     if(elapsed-lastUi>.2){publish();lastUi=elapsed}
   })
   setMarket(config)
-  return {setMarket,select,cancelOrder,closePosition,depositCapital(amount=100){ledger.deposit(amount);showMessage('Added $'+amount+' simulated funds')},
+  return {setMarket,select,cancelOrder,closePosition,depositCapital(amount=100){ledger.deposit(amount);fundedCapital+=amount;showMessage('Added $'+amount+' simulated funds')},
     dragStart(index){selected=index;publish()},dragMove(x,y){hover=local(x,y)},dragEnd(x,y){deploy(local(x,y));selected=-1;hover=null;preview.clear();publish()},dragCancel(){selected=-1;hover=null;preview.clear();publish()},
     destroy(){app.destroy(true,{children:true})}}
 }

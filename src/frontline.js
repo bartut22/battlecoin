@@ -1,12 +1,13 @@
-import { marketCoverage, orderbookRows } from './market-engine.js'
-export const ARENA = { width: 1600, height: 900, left: 245, right: 1355, top: 110, bottom: 790 }
+import { groupedOrderbookRows, marketCoverage } from './market-engine.js'
+export const ARENA = { width: 1600, height: 900, left: 280, right: 1355, top: 110, bottom: 790 }
 export function frontX(market) {
   return ARENA.left + (ARENA.right - ARENA.left) * marketCoverage(market).upCoverage
 }
 export function bidRanks(market, side) {
   const front = frontX(market), direction = side === 'UP' ? -1 : 1
   const width = side === 'UP' ? front - ARENA.left : ARENA.right - front
-  const rows = orderbookRows(market).filter(row => row.side === side && row.type === 'bid').slice(0, 4)
+  const band = market.participantNotional?.priceBand || 1
+  const rows = groupedOrderbookRows(market, side, 'bid', band).slice(0, 4)
   const gap = Math.min(76, width / (rows.length + 1))
   return rows.map((row, depth) => ({ ...row, x: front + direction * gap * (depth + .65), depth, gap }))
 }

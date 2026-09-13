@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { marketCoverage, orderbookRows } from '../src/market-engine.js'
+import { groupedOrderbookRows, marketCoverage, notionalCharacters, orderbookRows } from '../src/market-engine.js'
 import { depthUnits, createLedger } from '../src/simulation.js'
 test('displayed midpoint maps exactly to fair-value territory',()=>{
  const c=marketCoverage({bidUp:34,askUp:36,bidDown:64})
@@ -13,6 +13,18 @@ test('wide spreads use last trade, missing quotes do not invent probability',()=
 test('depth includes correct notional and complementary price distance',()=>{
  const rows=orderbookRows({bidUp:34,askUp:36,book:{UP:{bids:[{price:.34,size:1000}],asks:[]},DOWN:{bids:[{price:.64,size:100}],asks:[]}}})
  assert.equal(rows[0].notional,340);assert.equal(rows[0].distanceCents,1);assert.equal(rows[1].distanceCents,1)
+})
+test('visual price bands aggregate adjacent L2 levels without losing notional',()=>{
+ const market={bidUp:49,askUp:50,book:{UP:{bids:[{price:.49,size:100},{price:.48,size:50},{price:.47,size:20}],asks:[]},DOWN:{bids:[],asks:[]}}}
+ const rows=groupedOrderbookRows(market,'UP','bid',2)
+ assert.equal(rows.length,2);assert.equal(rows[0].price,49);assert.equal(rows[0].rangeLow,48)
+ assert.equal(rows[0].notional,49+24);assert.ok(Math.abs(rows[1].notional-9.4)<1e-9)
+})
+test('notional depth uses the editable troop denomination ladder',()=>{
+ const units=notionalCharacters(850,{scout:25,guard:100,anchor:500})
+ assert.deepEqual(units.map(unit=>unit.kind),['anchor','guard','guard','guard','scout','scout'])
+ assert.equal(units.reduce((sum,unit)=>sum+unit.notional,0),850)
+ assert.equal(notionalCharacters(10000,{scout:25,guard:100,anchor:500},4).reduce((sum,unit)=>sum+unit.notional,0),10000)
 })
 test('300 dollars at 25 per unit is twelve; residual and cap preserve notional',()=>{
  assert.equal(depthUnits(300,25).length,12)
