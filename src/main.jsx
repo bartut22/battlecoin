@@ -5,6 +5,7 @@ import LoginScreen from './LoginScreen.jsx'
 import { getSession, getUser, logout } from './auth.js'
 import { airdrop } from './solana.js'
 import './style.css'
+import './arena-theme.css'
 
 function initialUser() {
   const username = getSession()

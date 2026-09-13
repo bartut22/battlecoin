@@ -5,16 +5,19 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "test": "node --test scripts/*.test.mjs",
     "build": "vite build",
     "preview": "vite preview"
   },
   "dependencies": {
     "@solana/web3.js": "^1.99.0",
+    "lucide-react": "^1.45.0",
     "pixi.js": "^8.20.1",
     "react": "^19.2.8",
     "react-dom": "^19.2.8"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
     "@vitejs/plugin-react": "^6.1.1",
     "vite": "^8.3.0"
   }

@@ -1,13 +1,29 @@
-.auth-viewport { width: 100%; height: 100%; display: grid; place-items: center; background: url('/assets/background.png') center / cover no-repeat; }
-.auth-card { width: min(90vw, 360px); display: flex; flex-direction: column; gap: 14px; background: #ffffff; border: 2px solid #cfe0da; border-radius: 14px; padding: 28px 26px; box-shadow: 0 10px 30px #0002; color: #1f3b33; font-family: 'Arial Rounded MT Bold', 'Trebuchet MS', Arial, sans-serif; }
+.auth-viewport { width: 100%; height: 100%; display: grid; place-items: center; background: url('/assets/background.png') center / cover no-repeat; perspective: 600px; }
+.auth-card { width: min(90vw, 360px); display: flex; flex-direction: column; gap: 14px; background: var(--surface); border: 2px solid var(--border); border-radius: 14px; padding: 28px 26px; box-shadow: 0 10px 30px #0006; color: var(--text-primary); font-family: 'Arial Rounded MT Bold', 'Trebuchet MS', Arial, sans-serif; transition: background .3s ease, border-color .3s ease, box-shadow .3s ease, padding .3s ease; }
+.auth-card.launching { background: transparent; border-color: transparent; box-shadow: none; padding: 12px; pointer-events: none; }
 .auth-logo { display: block; width: 72px; height: 72px; margin: 0 auto; object-fit: contain; }
-.auth-title { margin: 0 0 4px; text-align: center; font-size: 28px; color: #d98e1a; letter-spacing: 1px; }
+.auth-logo-launch {
+  animation: coin-pop .35s cubic-bezier(.34, 1.56, .64, 1) both,
+             coin-spin .7s linear .35s infinite;
+  filter: drop-shadow(0 0 18px #ffdb64a0);
+}
+
+@keyframes coin-pop {
+  from { transform: scale(1) rotateY(0deg); }
+  to { transform: scale(1.6) rotateY(0deg); }
+}
+
+@keyframes coin-spin {
+  from { transform: scale(1.6) rotateY(0deg); }
+  to { transform: scale(1.6) rotateY(360deg); }
+}
+.auth-title { margin: 0 0 4px; text-align: center; font-size: 28px; color: var(--gold-light); text-shadow: 1px 2px var(--surface); letter-spacing: 1px; font-family: 'Cinzel', serif; font-weight: 700; }
 .auth-tabs { display: flex; gap: 8px; }
-.auth-tabs button { flex: 1; padding: 8px 0; background: #f1f5f3; border: 1px solid #d6e2dc; border-radius: 8px; color: #4c6a60; font-weight: 700; }
-.auth-tabs button.active { background: linear-gradient(#ffdb64, #e9aa29); border-color: #d98e1a; color: #443111; }
-.auth-card label { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: #3d5a51; font-weight: 700; }
-.auth-card input { padding: 10px 12px; border-radius: 8px; border: 1px solid #cfdcd6; background: #f8faf9; color: #1f3b33; font: inherit; font-size: 15px; }
-.auth-card input:focus-visible { outline: 2px solid #e9aa29; }
-.auth-error { margin: 0; color: #c23b32; font-size: 13px; text-align: center; }
-.auth-submit { margin-top: 6px; padding: 12px; background: linear-gradient(#ffdb64, #e9aa29); color: #443111; border: 1px solid #d98e1a; border-radius: 8px; font-weight: 900; box-shadow: 0 3px #b9781a; }
-.auth-submit:active { transform: translateY(1px); box-shadow: 0 2px #b9781a; }
+.auth-tabs button { flex: 1; padding: 8px 0; background: var(--surface-secondary); border: 1px solid var(--border); border-radius: 8px; color: var(--text-secondary); font-weight: 700; }
+.auth-tabs button.active { background: linear-gradient(var(--gold-light), var(--gold-dark)); border-color: var(--gold-light); color: var(--text-dark); }
+.auth-card label { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: var(--text-secondary); font-weight: 700; }
+.auth-card input { padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--input-bg); color: var(--text-primary); font: inherit; font-size: 15px; }
+.auth-card input:focus-visible { outline: 2px solid var(--gold-light); }
+.auth-error { margin: 0; color: #e6756b; font-size: 13px; text-align: center; }
+.auth-submit { margin-top: 6px; padding: 12px; background: linear-gradient(var(--button-hover), var(--button-active)); color: var(--text-dark); border: 1px solid var(--gold-light); border-radius: 8px; font-weight: 900; box-shadow: 0 3px var(--border); }
+.auth-submit:active { transform: translateY(1px); box-shadow: 0 2px var(--border); }
