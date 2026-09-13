@@ -4,6 +4,7 @@ import { createBattle } from './battle.js'
 import { loadCharacterArt, TROOP_KINDS } from './character-art.js'
 import usePolymarket from './usePolymarket.js'
 import { DEFAULT_CARD_VALUES, DEFAULT_TAKER_VALUES, editableCard, marketCoverage, orderbookRows } from './market-engine.js'
+import Sidebar from './Sidebar.jsx'
 
 const usd = value => Number(value || 0).toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 2 })
 const cents = value => value == null ? '--' : Number(value).toFixed(1).replace(/\.0$/, '') + 'c'
@@ -56,7 +57,8 @@ function Controls({ market, cards, setCards, participant, setParticipant }) {
   </aside>
 }
 
-export default function App() {
+export default function App({ user, wallet, onLogout }) {
+  const [sidebar, setSidebar] = useState(false)
   const host = useRef(null), battle = useRef(null), drag = useRef(null)
   const [cards,setCards] = useState(DEFAULT_CARD_VALUES)
   const [participant,setParticipant] = useState({UP:25,DOWN:25,kindUP:'scout',kindDOWN:'scout',values:{scout:25,guard:100,anchor:500}})
@@ -95,7 +97,9 @@ export default function App() {
     else battle.current?.select(d.index)
     drag.current=null
   }
-  return <main className="exchange">
+  return <>
+    <Sidebar open={sidebar} onOpen={() => setSidebar(true)} onClose={() => setSidebar(false)} user={user} wallet={wallet} onLogout={onLogout} />
+    <main className="exchange">
     <header className="exchange-header"><div className="brand">BATTLECOIN<span>BTC Up or Down</span></div><div className={`feed-status ${market.feedStatus}`} title={market.feedMessage}><i/>{live ? 'Live Polymarket' : market.feedStatus}</div><span className="sim-badge">Simulated funds</span><button className="icon-button" title="Tutorial" aria-label="Tutorial" onClick={()=>setTutorial(true)}><CircleHelp size={18}/></button></header>
     <div className="workspace">
       <div className="main-column">
@@ -111,4 +115,5 @@ export default function App() {
     </div>
     {tutorial && <div className="modal-backdrop"><section className="tutorial-modal" role="dialog" aria-modal="true" aria-label="Simulated funds tutorial"><CircleHelp size={26}/><h2>Your market arena</h2><p>You start with $100 in simulated funds. Deposits add demo capital only.</p><ol><li>The boundary follows Polymarket's displayed UP probability.</li><li>Drag a card onto the UP or DOWN field to place a simulated order. Your units have gold outlines.</li><li>Change card amounts and the dollars represented by other participants in the right panel.</li></ol><p>Characters represent aggregated price levels, not individual traders. Retreats show liquidity removed; public depth cannot identify every cancellation.</p><label className="remember"><input type="checkbox" checked={remember} onChange={e=>setRemember(e.target.checked)}/>Don't show again</label><button className="primary-button" onClick={()=>{if(remember)localStorage.setItem(tutorialKey,'1');setTutorial(false)}}>Enter arena</button></section></div>}
   </main>
+  </>
 }
