@@ -46,6 +46,9 @@ Palm sway, intermittent wind, looping river ripples, and a short-side tumbleweed
 restricted to peripheral scenery zones. They do not receive pointer events or change
 orders. Effects are suppressed within 40 arena pixels of actor bounds, and reduced-motion
 preferences leave the scenery still. Both towers have matching offsets from their walls.
+Only green foliage neighborhoods deform; rock, trunk, sand, and wall pixels stay fixed.
+Wind gusts cross both upper and lower palms. A shared vertical river current is occluded by
+the bridge, and a larger tumbleweed rolls vertically along the upper short-side perimeter.
 
 The tutorial contains a separate animated paper-order example with pause/replay controls.
 It never calls the ledger, wallet, or order APIs; reduced motion shows a static example.

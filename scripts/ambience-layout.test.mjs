@@ -1,13 +1,19 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { AMBIENT_ZONES, FIELD_RECT, overlaps, palmOffset, zoneIsClear } from '../src/ambience-layout.js'
+import { AMBIENT_ZONES, FIELD_REGIONS, overlaps, palmOffset, riverPosition, tumbleweedPosition, zoneIsClear } from '../src/ambience-layout.js'
 import { TOWERS, ARENA } from '../src/frontline.js'
 
 test('all scenery animation zones stay outside the trading field and tower footprints', () => {
   for (const zone of Object.values(AMBIENT_ZONES)) {
-    assert.equal(overlaps(zone, FIELD_RECT, 25), false)
+    for(const region of FIELD_REGIONS)assert.equal(overlaps(zone, region, 25), false)
     for (const tower of TOWERS) assert.equal(overlaps(zone, { x: tower.x - 72, y: tower.y - 85, width: 144, height: 170 }, 40), false)
   }
+})
+test('river and enlarged tumbleweed travel vertically',()=>{
+  const a=riverPosition(1,1,1),b=riverPosition(1,1,2)
+  assert.equal(a.x,b.x);assert.ok(b.y>a.y)
+  const start=tumbleweedPosition(0),end=tumbleweedPosition(1)
+  assert.equal(start.x,end.x);assert.ok(end.y-start.y>200)
 })
 test('nearby actors suppress ambient motion with an explicit forty pixel buffer', () => {
   const zone = AMBIENT_ZONES.riverNorth
