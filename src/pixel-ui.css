@@ -1,0 +1,124 @@
+html body, #root, .exchange, .exchange *, .sidebar, .sidebar *, .sidebar-strip, .sidebar-strip *, .market-rollover, .market-rollover * {
+  font-family: 'VT323', monospace;
+  font-synthesis: none;
+  letter-spacing: 0;
+}
+.exchange { font-size: 18px; }
+.header-market b { font-size: 21px; }
+.header-market span, .feed-status, .sim-badge { font-size: 16px; }
+.outcome small { font-size: 16px; }
+.outcome strong { font-size: 34px; }
+.outcome span { font-size: 15px; }
+.market-center > a { font-size: 17px; }
+.market-metrics small { font-size: 13px; }
+.market-metrics b { font-size: 20px; }
+.market-metrics { grid-template-columns: repeat(3,minmax(0,1fr)); }
+.market-metrics > div { min-width: 0; }
+.section-heading h2 { font-size: 23px; }
+.section-heading small, .book-side-label small, .setting-block > small { font-size: 15px; }
+.rail-tabs button, .book-group h3, .book-side-label span { font-size: 17px; }
+.quote-head { font-size: 14px; }
+.quote-board button { font-size: 20px; }
+.quote-head, .quote-board button { grid-template-columns: 1fr 70px 70px; }
+.exchange th, .book-group th { font-size: 15px; }
+.exchange td, .book-group td { font-size: 17px; }
+.book-group th, .book-group td { padding: 6px 3px; }
+.card-setting { grid-template-columns: 52px minmax(0,1fr) 78px; }
+.card-setting strong { font-size: 18px; }
+.card-setting small, .card-setting label span { font-size: 14px; }
+.card-setting input, .segmented button, .setting-block > label { font-size: 18px; }
+.rail-footer, .scale-example { font-size: 17px; }
+.portfolio-header nav button { font-size: 18px; }
+.pnl, .pnl b { font-size: 17px; }
+.pnl { gap: 12px; flex-wrap: wrap; }
+.empty-state { font-size: 19px; }
+.capital { min-width: 205px; width: 205px; }
+.capital-title small, .capital-actions span { font-size: 14px; }
+.capital-title b { font-size: 26px; }
+.sol-convert small { font-size: 14px; }
+.sol-convert-row { flex-wrap: nowrap; gap: 3px; }
+.sol-convert-row input { font-size: 16px; width: 54px; }
+.sol-convert-row button { font-size: 14px; padding: 4px; }
+.order-banner { height: 30px; }
+.order-banner button { font-size: 17px; }
+.order-banner .up { flex-direction: row-reverse; }
+.order-banner .up svg { transform: scaleX(-1); }
+.order-banner .down { flex-direction: row-reverse; }
+.order-banner .down svg { transform: none; }
+.deck-card { height: 102px; grid-template-rows: 62px 15px 17px; padding: 2px; }
+.deck-card > span { font-size: 14px; white-space: normal; text-align: center; line-height: 1; }
+.deck-card > b { font-size: 18px; }
+.deck-legend { font-size: 16px; }
+.tutorial-modal h2 { font-size: 30px; }
+.tutorial-modal p, .tutorial-modal li, .remember, .primary-button { font-size: 20px; }
+.arena-toast, .feed-notice { font-size: 18px; max-width: calc(100% - 24px); text-align: center; }
+.market-rollover { position: fixed; z-index: 12; top: 168px; right: 326px; width: 300px; max-width: calc(100vw - 84px); display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: #fff1ce; color: #3b3022; border: 2px solid #957137; border-left: 5px solid #208276; border-radius: 4px; box-shadow: 0 4px 0 #58432666; animation: market-arrive .22s ease-out; }
+.market-rollover > svg { flex-shrink: 0; color: #177968; }
+.market-rollover > div { min-width: 0; display: grid; gap: 3px; }
+.market-rollover strong { font-size: 21px; }
+.market-rollover span { font-size: 16px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.market-rollover button { margin-left: auto; flex-shrink: 0; }
+@keyframes market-arrive { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
+@media (min-width:1500px) { .market-rollover { right:354px; } }
+@media (max-width: 1150px) {
+  .deck-legend { display: none; }
+  .deck { grid-template-columns: repeat(4,72px); gap: 4px; }
+  .market-strip { gap: 6px; padding: 7px; }
+  .outcome { min-width: 94px; padding: 6px; }
+  .outcome span { white-space: normal; }
+  .market-metrics b { font-size: 17px; }
+  .market-metrics small { font-size: 12px; }
+  .portfolio-header { flex-wrap: wrap; }
+  .market-rollover { right: 326px; top:182px; }
+  .main-column { grid-template-rows: 112px minmax(230px,1fr) 176px 178px; }
+}
+@media (max-width: 850px) {
+  .workspace { grid-template-columns: minmax(0,1fr) 254px; }
+  .deck-bar { flex-wrap: wrap; justify-content: center; }
+  .main-column { grid-template-rows: 140px minmax(230px,1fr) 264px 178px; }
+  .exchange { height: auto; min-height: 100dvh; }
+  .market-metrics { grid-template-columns: 1fr; }
+  .market-metrics > div { display: flex; justify-content: space-between; padding: 2px 4px; border: 0; }
+  .market-center > a { white-space: normal; font-size: 15px; }
+  .capital { width: 100%; }
+  .capital-title { display: flex; }
+  .market-rollover { right: 12px; top:210px; }
+}
+@media (max-width: 680px) {
+  .exchange { margin-left: 48px; }
+  .sidebar-strip { width: 48px; }
+  .exchange-header { gap: 6px; padding: 0 6px; }
+  .header-market b { font-size: 18px; }
+  .feed-status { font-size: 13px; padding: 4px; }
+  .coin-logo { width: 32px; height: 32px; flex-shrink: 0; }
+  .outcome { min-width: 62px; padding: 4px; }
+  .market-strip { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); grid-template-rows: 56px 70px; gap: 6px; padding: 7px; }
+  .outcome { grid-row: 1; grid-template-columns: 1fr 1fr; align-items: center; }
+  .outcome.positive { grid-column: 1; }
+  .outcome.negative { grid-column: 2; }
+  .outcome strong { text-align: right; }
+  .outcome span { grid-column: 1 / -1; }
+  .market-center { grid-column: 1 / -1; grid-row: 2; gap: 4px; }
+  .market-center > a { max-width: none; white-space: nowrap; font-size: 15px; }
+  .market-metrics { grid-template-columns: repeat(3,minmax(0,1fr)); max-width: none; }
+  .outcome small { font-size: 13px; }
+  .outcome strong { font-size: 26px; }
+  .outcome span { font-size: 14px; }
+  .market-metrics > div { display: grid; justify-content: center; gap: 2px; padding: 3px 2px; }
+  .market-metrics small { font-size: 12px; }
+  .market-metrics b { font-size: 16px; }
+  .main-column { grid-template-rows: 148px 310px 264px 200px; }
+  .deck-bar { display: flex; padding: 10px; }
+  .capital { min-width: 0; width: 100%; }
+  .sol-convert-row { flex-wrap: nowrap; }
+  .deck-center { width: 100%; }
+  .deck { width: 100%; grid-template-columns: repeat(4,minmax(0,1fr)); }
+  .deck-card > span { font-size: 13px; }
+  .unit-portrait { max-width: 100%; }
+  .portfolio-header { padding: 5px 8px; }
+  .portfolio-header nav { gap: 10px; }
+  .portfolio-header nav button { font-size: 16px; }
+  .pnl, .pnl b { font-size: 15px; }
+  .market-rollover { top: 216px; }
+}
+@media (prefers-reduced-motion: reduce) { .market-rollover { animation: none; } }

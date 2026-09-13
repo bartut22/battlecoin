@@ -30,10 +30,16 @@ function finitePositive(value) {
   return Number.isFinite(number) && number > 0 ? number : null
 }
 
+function contractPrice(value) {
+  if (value === null || value === undefined || value === '') return null
+  const price = Number(value)
+  return Number.isFinite(price) && price >= 0 && price <= 1 ? price : null
+}
+
 function normalizeLevels(levels, descending) {
   const byPrice = new Map()
   for (const level of Array.isArray(levels) ? levels : []) {
-    const price = finitePositive(level?.price)
+    const price = contractPrice(level?.price)
     const size = finitePositive(level?.size)
     if (price === null || size === null || price > 1) continue
     byPrice.set(String(price), { price, size })
@@ -51,7 +57,7 @@ export function replaceBook(snapshot) {
 export function applyBookDelta(book, change) {
   const direction = String(change?.side || '').toUpperCase()
   const side = direction === 'BUY' ? 'bids' : direction === 'SELL' ? 'asks' : null
-  const price = finitePositive(change?.price)
+  const price = contractPrice(change?.price)
   const size = Number(change?.size)
   if (!side || price === null || price > 1 || !Number.isFinite(size) || size < 0) return book
 
@@ -387,7 +393,7 @@ export function createPolymarketFeed(options = {}) {
 
   const acceptBook = (outcome, payload, eventTime) => {
     if (bookReady[outcome] && eventTime < bookTimestamp[outcome]) return
-    if (outcome === 'UP' && lastTradeUp === null && finitePositive(payload.last_trade_price) !== null) lastTradeUp = cents(Number(payload.last_trade_price))
+    if (outcome === 'UP' && lastTradeUp === null && contractPrice(payload.last_trade_price) !== null) lastTradeUp = cents(Number(payload.last_trade_price))
     book[outcome] = replaceBook(payload)
     bookReady[outcome] = true
     bookTimestamp[outcome] = eventTime
@@ -412,7 +418,7 @@ export function createPolymarketFeed(options = {}) {
   }
 
   const acceptTrade = (outcome, payload) => {
-    const price = finitePositive(payload.price)
+    const price = contractPrice(payload.price)
     const size = finitePositive(payload.size)
     const direction = String(payload.side || '').toUpperCase()
     if (price === null || price > 1 || size === null || (direction !== 'BUY' && direction !== 'SELL')) return

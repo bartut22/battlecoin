@@ -16,7 +16,7 @@ export function createLedger(initial = 100) {
     open, completed, positions,
     deposit(amount) { if (Number.isFinite(amount) && amount > 0) available += amount },
     place(side, price, notional, marketId) {
-      if (!(price > 0 && price < 100 && notional > 0 && notional <= available)) return null
+      if (!(Number.isFinite(price) && price > 0 && price <= 100 && Number.isFinite(notional) && notional > 0 && notional <= available)) return null
       const order = {id:'O-' + ++seq,side,price,notional,quantity:notional / (price / 100),marketId,status:'open'}
       available -= notional; open.push(order); return order
     },
@@ -27,7 +27,7 @@ export function createLedger(initial = 100) {
     },
     fill(id, quantity, price) {
       const order = open.find(o=>o.id===id)
-      if(!order || !(quantity>0) || !(price>0) || price > order.price) return 0
+      if(!order || !Number.isFinite(quantity) || !(quantity>0) || !Number.isFinite(price) || price < 0 || price > order.price) return 0
       const size = Math.min(quantity,order.quantity), reserved = size * order.price / 100, cost = size * price / 100
       available += reserved - cost
       positions.push({id:'P-'+ ++seq,side:order.side,price,notional:cost,quantity:size,marketId:order.marketId,status:'held'})
@@ -45,7 +45,7 @@ export function createLedger(initial = 100) {
     },
     close(id, price) {
       const index=positions.findIndex(p=>p.id===id)
-      if(index<0 || !(price>0 && price<=100)) return false
+      if(index<0 || !Number.isFinite(price) || !(price>=0 && price<=100)) return false
       const [position]=positions.splice(index,1)
       const proceeds=position.quantity*price/100
       available+=proceeds;realized+=proceeds-position.notional

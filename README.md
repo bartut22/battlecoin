@@ -14,6 +14,11 @@ The boundary follows Polymarket's displayed UP probability: midpoint for spreads
 last traded price for wider spreads. DOWN coverage is its complement. Neither side is normalized
 by order size. Missing probability is shown as unavailable, not a fabricated quote.
 
+Prices display the complete 0-100c range. Zero-price depth remains visible; dollar-notional
+placement requires a positive price because quantity is notional divided by price. Simulated
+100c purchases and 0c exits are supported. Each new market shows a dismissible notification
+that expires after 6.5 seconds without interrupting arena controls.
+
 Sources:
 - https://docs.polymarket.com/concepts/prices-orderbook
 - https://docs.polymarket.com/api-reference/wss/market
@@ -37,6 +42,9 @@ credentials with VITE_. Vite proxies /gamma and /clob; a static production host 
 - Gold silhouettes identify local orders. Cancel buttons release reserved funds exactly once.
 - Public trade events animate incoming balloons that drop falling bombs and impact bursts.
   Local taker balloons have gold silhouettes. Impact effects do not fabricate book removals.
+- Exact-price trade quantities determine partial recoil or full pixel-shatter effects, including
+  grouped depth and complementary BUY outcomes. Cancellations retain their retreat animation.
+  Public depth remains authoritative after the animation; characters represent aggregate liquidity.
 - Open orders, held positions and history occupy a separate table below the arena.
 - Balloons simulate taker purchases against available asks; closing a position uses available bids.
 - Limit fills are a tutorial approximation driven by sell-side public trades at an executable price.
@@ -52,6 +60,15 @@ credentials with VITE_. Vite proxies /gamma and /clob; a static production host 
 `node scripts/verify-orders.mjs` checks deterministic placement, refunds, taker fills,
 position closing and repricing with isolated browser fixtures.
 Browser screenshots are written to artifacts/.
+
+`node scripts/verify-arena-updates.mjs` verifies endpoint prices, bid placement, partial/full
+hits, nonblocking market rollover, pixel typography and desktop/tablet/mobile rendering with
+isolated Polymarket fixtures. The pixel font is bundled locally through `@fontsource/vt323`.
+The reference-inspired dashboard skin is in `src/pixel-skin.css`, reusing the login's
+gold button and parchment artwork. `Pixelify Sans` is bundled for dashboard and arena
+labels; the login retains `Press Start 2P`. Market data and order accounting are independent
+of the skin. Browser checks also cover card editing, refunds, taker fills, closing,
+account-panel navigation and tutorial controls.
 
 The account login remains a local prototype and is not production authentication.
 Hermes UI routing panels were removed from the playing surface.

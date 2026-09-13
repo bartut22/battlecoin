@@ -11,6 +11,26 @@ const usd = value => Number(value || 0).toLocaleString('en-US', { style: 'curren
 const cents = value => value == null ? '--' : Number(value).toFixed(1).replace(/\.0$/, '') + 'c'
 const btc = value => value == null ? '--' : '$' + Number(value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 const tutorialKey = 'battlecoin-market-arena-tutorial-v2'
+function NewMarketNotice({ market }) {
+  const previous = useRef(null)
+  const [notice, setNotice] = useState(null)
+  useEffect(() => {
+    if (!market.marketId) return
+    if (previous.current && previous.current !== market.marketId) {
+      setNotice({ id: market.marketId, title: market.title })
+    }
+    previous.current = market.marketId
+  }, [market.marketId, market.title])
+  useEffect(() => {
+    if (!notice) return
+    const timer = setTimeout(() => setNotice(null), 6500)
+    return () => clearTimeout(timer)
+  }, [notice])
+  return notice && <aside className="market-rollover" role="status" aria-live="polite" aria-atomic="true">
+    <Flag size={20} /><div><strong>New market opened</strong><span>{notice.title}</span></div>
+    <button className="icon-button" aria-label="Dismiss new market notification" onClick={() => setNotice(null)}><X size={16} /></button>
+  </aside>
+}
 function CoinLogo() { return <span className="coin-logo" aria-label="Battlecoin"><img src="/assets/logo.png" alt="" /></span> }
 function Portrait({ kind, side = 'UP' }) {
   const canvas = useRef(null)
@@ -19,6 +39,7 @@ function Portrait({ kind, side = 'UP' }) {
     loadCharacterArt().then(frames => {
       if (!active || !canvas.current) return
       const ctx = canvas.current.getContext('2d')
+      ctx.imageSmoothingEnabled = false
       ctx.clearRect(0, 0, 256, 256)
       ctx.drawImage(frames[side][kind], 0, 0)
     }).catch(() => {})
@@ -123,6 +144,7 @@ export default function App({ user, wallet, onLogout }) {
   }
   return <>
     <Sidebar open={sidebar} onOpen={() => setSidebar(true)} onClose={() => setSidebar(false)} user={user} wallet={wallet} onLogout={onLogout} />
+    <NewMarketNotice market={market} />
     <main className="exchange">
     <header className="exchange-header"><CoinLogo/><div className="header-market"><b>BTC arena</b><span>Polymarket simulation</span></div><div className={`feed-status ${market.feedStatus}`} title={market.feedMessage}><i/>{live ? 'Live market' : market.feedStatus}</div><span className="sim-badge">Simulated funds</span><button className="icon-button" title="Tutorial" aria-label="Tutorial" onClick={()=>setTutorial(true)}><CircleHelp size={18}/></button></header>
     <div className="workspace">
