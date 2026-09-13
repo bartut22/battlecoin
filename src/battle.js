@@ -32,7 +32,8 @@ export async function createBattle(host,onChange,config={}) {
   app.stage.addChild(shade,lines,field,labels,preview)
   for(const [index,x] of [[5,165],[6,1435]]){const s=new Sprite(assets[index]);s.anchor.set(.5);s.width=170;s.scale.y=s.scale.x;s.position.set(x,H/2);app.stage.addChild(s)}
   let market=config.market||DEFAULT_MARKET,cards=config.cards||CARDS
-  const ledger=createLedger(100), units=new Map(), retreating=[], flights=[], bombs=[], blasts=[], seenTrades=new Set()
+  const liveLedger=createLedger(100), units=new Map(), retreating=[], flights=[], bombs=[], blasts=[], seenTrades=new Set()
+  let ledger=market.tutorial?createLedger(100):liveLedger, tutorialMode=!!market.tutorial, savedLiveMarketId=null, savedFundedCapital=100, savedLiveUnits=[]
   let fundedCapital=100
   let orderSide=config.orderSide||'UP', bombId=0
   let selected=-1,elapsed=0,lastUi=0,message='',messageUntil=0,drawnFair=.5,targetFair=.5,marketId=null,hover=null
@@ -166,6 +167,22 @@ export async function createBattle(host,onChange,config={}) {
     }
   }
   function setMarket(next){
+    const nextTutorial=!!next.market?.tutorial
+    if(nextTutorial!==tutorialMode){
+      if(nextTutorial){
+        savedLiveUnits=[...units.values()].filter(unit=>unit.own).map(unit=>({key:unit.key,side:unit.side,x:unit.targetX,y:unit.targetY,kind:unit.kind}))
+        savedLiveMarketId=marketId;savedFundedCapital=fundedCapital;ledger=createLedger(100);fundedCapital=100
+      }
+      else {ledger=liveLedger;fundedCapital=savedFundedCapital}
+      for(const unit of [...units.values()]){unit.wrap.destroy({children:true});units.delete(unit.key)}
+      for(const unit of retreating.splice(0))unit.wrap.destroy({children:true})
+      for(const flight of flights.splice(0))flight.sprite.destroy({children:true})
+      for(const bomb of bombs.splice(0))bomb.g.destroy()
+      for(const blast of blasts.splice(0))blast.ring.destroy()
+      marketId=nextTutorial?'tutorial':savedLiveMarketId
+      if(!nextTutorial && next.market.marketId===savedLiveMarketId)for(const unit of savedLiveUnits)addUnit(unit.key,unit.side,unit.x,unit.y,true,unit.kind)
+      selected=-1;hover=null;message='';preview.clear();seenTrades.clear();tutorialMode=nextTutorial
+    }
     market=next.market||market;cards=next.cards||cards
     orderSide=next.orderSide||orderSide
     if(market.marketId!==marketId){
@@ -180,7 +197,7 @@ export async function createBattle(host,onChange,config={}) {
     publish()
   }
   function publish(){
-    onChange({selected,capital:ledger.available,fundedCapital,time:market.endTime?Math.max(0,Math.ceil((Date.parse(market.endTime)-Date.now())/1000)):0,
+    onChange({selected,capital:ledger.available,fundedCapital,time:market.tutorial?300:market.endTime?Math.max(0,Math.ceil((Date.parse(market.endTime)-Date.now())/1000)):0,
       message,ended:false,crowns:[0,0],openOrders:ledger.open.map(o=>({...o})),completedOrders:ledger.completed.slice(0,100),
       positions:ledger.positions.map(p=>({...p,status:p.marketId===marketId?'held':'awaiting settlement'})),
       unrealizedPnl:ledger.mark(market),realizedPnl:ledger.realized})
@@ -188,6 +205,7 @@ export async function createBattle(host,onChange,config={}) {
   function select(index){selected=selected===index?-1:index;preview.clear();publish()}
   function local(x,y){const r=app.canvas.getBoundingClientRect();return {x:(x-r.left)*W/r.width,y:(y-r.top)*H/r.height}}
   function deploy(p){
+    if(market.tutorial)return
     if(selected<0)return
     if(market.feedStatus!=='live'){showMessage('Waiting for a live market connection');return}
     if(p.x<LEFT||p.x>RIGHT||p.y<TOP||p.y>BOTTOM){showMessage('Choose a square inside the arena');return}
@@ -285,7 +303,16 @@ export async function createBattle(host,onChange,config={}) {
     if(elapsed-lastUi>.2){publish();lastUi=elapsed}
   })
   setMarket(config)
-  return {setMarket,select,cancelOrder,closePosition,depositCapital(amount=100){ledger.deposit(amount);fundedCapital+=amount;showMessage('Added $'+amount+' simulated funds')},
+  return {setMarket,select,cancelOrder,closePosition,
+    buyTutorialShares(){
+      if(!market.tutorial || ledger.positions.length)return false
+      const price=market.askUp, order=ledger.place('UP',price,10*price/100,marketId)
+      if(!order)return false
+      ledger.fill(order.id,10,price)
+      tradeFlight({side:'UP',direction:'BUY',price:price/100,notional:10*price/100},true)
+      publish();return true
+    },
+    depositCapital(amount=100){ledger.deposit(amount);fundedCapital+=amount;showMessage('Added $'+amount+' simulated funds')},
     dragStart(index){selected=index;publish()},dragMove(x,y){hover=local(x,y)},dragEnd(x,y){deploy(local(x,y));selected=-1;hover=null;preview.clear();publish()},dragCancel(){selected=-1;hover=null;preview.clear();publish()},
     destroy(){canvasResizeObserver.disconnect();app.destroy(true,{children:true})}}
 }

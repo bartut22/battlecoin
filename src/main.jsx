@@ -19,7 +19,7 @@ function Root() {
     if (result.isNew && result.wallet) airdrop(result.wallet).catch(() => {})
   }
   return user
-    ? <App user={user.username} wallet={user.wallet} onLogout={onLogout} />
+    ? <App key={user.username} user={user.username} wallet={user.wallet} onLogout={onLogout} />
     : <LoginScreen onAuth={onAuth} />
 }
 
